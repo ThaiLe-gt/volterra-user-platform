@@ -47,6 +47,9 @@
   --chart-power: #4f9bff;
   --chart-airflow: #2bd576;
   --chart-temp: #f5a623;
+  --chart-solar: #f5c451;
+  --chart-bess: #2bd576;
+  --chart-charger: #22d3ee;
 }
 
 .dark {
@@ -98,6 +101,9 @@
   --color-chart-power: var(--chart-power);
   --color-chart-airflow: var(--chart-airflow);
   --color-chart-temp: var(--chart-temp);
+  --color-chart-solar: var(--chart-solar);
+  --color-chart-bess: var(--chart-bess);
+  --color-chart-charger: var(--chart-charger);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

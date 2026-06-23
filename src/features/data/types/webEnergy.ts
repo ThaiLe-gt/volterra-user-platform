@@ -1,4 +1,10 @@
-/** Minimal DTO mirrors of the legacy web-energy API (Vue app). */
+/**
+ * DTO mirrors of the legacy web-energy API (Vue app
+ * `web-energy/client/src/services/energy/types.ts`).
+ *
+ * Numeric/data fields only — the `*WithUnit` string variants from the Vue app
+ * are intentionally dropped; the new UI formats units itself.
+ */
 
 export enum EnumDeviceType {
   CommonSystem = 0,
@@ -57,60 +63,151 @@ export interface DeviceResponseDto {
   updatedAt?: string;
 }
 
+// ---- Energy payload shapes ------------------------------------------------
+
 export interface MultimeterDto {
+  ia?: number;
+  ib?: number;
+  ic?: number;
+  ua?: number;
+  ub?: number;
+  uc?: number;
   p?: number;
+  q?: number;
+  f?: number;
   imp?: number;
   exp?: number;
   net?: number;
 }
 
-export interface SystemCommonDto {
+export interface CommonEnergyData {
   deviceId?: number;
   status?: boolean;
   multimeter?: MultimeterDto;
 }
 
-export interface ChargerDto {
-  deviceId?: number;
-  deviceName?: string;
+export interface PlcDto {
   status?: boolean;
+  communication?: boolean;
+}
+
+export interface AtsDto {
+  name?: string;
+  status?: boolean;
+}
+
+export interface SystemCommonDto extends CommonEnergyData {
+  auxiliaryStatus?: boolean;
+  plc?: PlcDto;
+  switchs?: AtsDto[];
+}
+
+export type GridDto = CommonEnergyData;
+
+export type WindDto = CommonEnergyData;
+
+export interface SolarStringDto {
+  voltage?: number;
+  current?: number;
+}
+
+export interface SolarDto extends CommonEnergyData {
+  runMode?: number;
+  voltage?: number;
+  current?: number;
+  power?: number;
+  reactivePower?: number;
+  temperature?: number;
+  /** Cumulative energy yield counter. */
+  energyTimeStamps?: number;
+  stringList?: SolarStringDto[];
+}
+
+/**
+ * BESS — the operationally meaningful numeric subset of the legacy ~200-field
+ * DTO (the alarm/fault flag bitfields are omitted; add as needed).
+ */
+export interface BessDto extends CommonEnergyData {
+  outputType?: number;
+  runningState?: number;
+  powerFlowStatus?: number;
+  // Battery
+  batteryVoltage?: number;
+  batteryCurrent?: number;
+  batteryPower?: number;
+  /** State of charge, %. */
+  batteryLevel?: number;
+  /** State of health, %. */
+  batteryStateOfHealthy?: number;
+  batteryTemperature?: number;
+  batteryCapacity?: number;
+  insideTemperature?: number;
+  // Power flow
+  totalActivePower?: number;
+  loadPower?: number;
+  exportPower?: number;
+  reactivePower?: number;
+  powerFactor?: number;
+  gridFrequency?: number;
+  // Energy counters
+  dailyOutputEnergy?: number;
+  totalOutputEnergy?: number;
+  dailyChargeEnergy?: number;
+  totalChargeEnergy?: number;
+  dailyBatteryDischargeEnergy?: number;
+  totalBatteryDischargeEnergy?: number;
+  dailyPvGeneration?: number;
+  totalPvGeneration?: number;
+  dailyImportEnergy?: number;
+  totalImportEnergy?: number;
+}
+
+export interface ChargerDto extends CommonEnergyData {
+  deviceName?: string;
   chargerPointId?: string;
   chargeStatus?: string;
   ocppStatus?: number;
+  ocppVersion?: string;
+  allowPublic?: boolean;
+  limitHours?: number;
+  lastActiveAt?: string;
+  totalChargedTime?: number;
   totalChargeEnergy?: number;
+  lastChargedTime?: number;
   lastChargeEnergy?: number;
+  chargeDurationTime?: number;
+  chargeEstimationTime?: number;
   chargeStateOfBattery?: number;
-}
-
-export interface BessDto {
-  deviceId?: number;
-  status?: boolean;
-  batteryLevel?: number;
 }
 
 export interface EnergyDataResponseDto {
   latestTime?: string;
   latestOnline?: string;
   system?: SystemCommonDto;
-  charger?: ChargerDto[];
+  grid?: GridDto;
+  wind?: WindDto;
+  solar?: SolarDto;
   bess?: BessDto[];
+  charger?: ChargerDto[];
 }
 
-export interface SignalLatestDto {
+/**
+ * Latest-signal record. The backend returns the readable shape
+ * `{ time, stationId, isStationHealthy, deviceType, data }`; some call sites
+ * also see the energy fields flattened onto the record, so both are allowed.
+ */
+export interface SignalLatestDto extends EnergyDataResponseDto {
   stationId?: number;
   isStationHealthy?: boolean;
+  deviceType?: EnumDeviceType;
   time?: string;
   data?: EnergyDataResponseDto;
-  latestTime?: string;
-  latestOnline?: string;
-  system?: SystemCommonDto;
-  charger?: ChargerDto[];
-  bess?: BessDto[];
 }
 
 export interface SignalHistoryDto {
   time?: string;
   stationId?: number;
   isStationHealthy?: boolean;
+  deviceType?: EnumDeviceType;
   data?: EnergyDataResponseDto;
 }

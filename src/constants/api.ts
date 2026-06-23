@@ -25,6 +25,10 @@ export const API_ENDPOINTS = {
     signalHistoryBess: "/signal/list-bess",
     signalHistoryCharger: "/signal/list-charger",
     signalHistoryWeather: "/signal/list-weather",
+    controlGrid: "/signal/control-grid",
+    controlSolar: "/signal/control-solar",
+    controlBess: "/signal/control-bess",
+    controlChargeDischarge: "/signal/control-charge-discharge",
   },
   gateway: {
     sites: "/api/v1/portfolio/sites",

@@ -11,6 +11,7 @@ export function usePortfolioSites(activeTypes: AssetType[]) {
   return useQuery({
     queryKey: queryKeys.portfolio.sites(filter),
     queryFn: () => portfolioApi.getSites(filter),
+    refetchInterval: REALTIME_POLL_INTERVAL_MS,
   });
 }
 
@@ -18,6 +19,7 @@ export function usePortfolioKpis() {
   return useQuery({
     queryKey: queryKeys.portfolio.kpis(),
     queryFn: () => portfolioApi.getKpis(),
+    refetchInterval: REALTIME_POLL_INTERVAL_MS,
   });
 }
 

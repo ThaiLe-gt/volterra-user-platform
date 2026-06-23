@@ -32,25 +32,23 @@ export function SiteDetailPanel({ siteId, onClose }: SiteDetailPanelProps) {
   return (
     <PanelShell onClose={onClose}>
       <div className="border-b border-border px-5 pb-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">{site.name}</h2>
-            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Site · {site.category}</span>
-            </div>
-          </div>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold text-foreground">{site.name}</h2>
           <StatusDot status={site.status} withLabel />
+        </div>
+        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+          <span>Site · {site.category}</span>
         </div>
       </div>
 
       <Tabs defaultValue="overview" className="flex min-h-0 flex-1 flex-col">
         <div className="px-5 pt-3">
-          <TabsList className="w-full justify-start gap-4 bg-transparent p-0">
+          <TabsList className="w-full justify-start gap-6 bg-transparent p-0 border-b border-border rounded-none h-auto">
             {["overview", "performance", "alerts", "details"].map((t) => (
               <TabsTrigger
                 key={t}
                 value={t}
-                className="rounded-none border-b-2 border-transparent bg-transparent px-0 pb-2 capitalize data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                className="rounded-none border-b-2 border-x-0 border-t-0 border-transparent bg-transparent px-0 pb-2 capitalize data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-primary dark:data-[state=active]:border-x-transparent dark:data-[state=active]:border-t-transparent dark:border-transparent dark:data-[state=active]:text-foreground shadow-none h-auto -mb-[2px]"
               >
                 {t}
               </TabsTrigger>

@@ -19,11 +19,26 @@ import type {
 import {
   EnumDeviceType,
   type DeviceResponseDto,
-  type EnergyDataResponseDto,
   type SignalHistoryDto,
   type SignalLatestDto,
   type StationResponseDto,
 } from "../types/webEnergy";
+import {
+  METRICS,
+  SELECTOR,
+  bessPowerKw,
+  bessSoc,
+  chargerEnergy,
+  chargerUtilization,
+  historyToSeries,
+  latestTimestamp,
+  rangeToWindow,
+  round,
+  solarGenerationKw,
+  systemPowerKw,
+  systemPowerMw,
+  type Metric,
+} from "./webEnergyMappers";
 import type { Repository, SiteFilter } from "./types";
 
 interface StationRecord {
@@ -92,6 +107,7 @@ async function fetchDevices(apiId: number): Promise<DeviceResponseDto[]> {
   return res.list ?? [];
 }
 
+/** Latest signal across all telemetry domains (system, solar, BESS, charger). */
 async function fetchLatestSignal(
   apiId: number
 ): Promise<SignalLatestDto | undefined> {
@@ -99,8 +115,14 @@ async function fetchLatestSignal(
     stationId: String(apiId),
     isCheckTime: "true",
   });
-  params.append("deviceType", String(EnumDeviceType.CommonSystem));
-  params.append("deviceType", String(EnumDeviceType.Charger));
+  for (const deviceType of [
+    EnumDeviceType.CommonSystem,
+    EnumDeviceType.Solar,
+    EnumDeviceType.Bess,
+    EnumDeviceType.Charger,
+  ]) {
+    params.append("deviceType", String(deviceType));
+  }
 
   const res = await webEnergyClient.get<SignalLatestDto>(
     `${API_ENDPOINTS.webEnergy.signalLatest}?${params.toString()}`
@@ -115,11 +137,7 @@ function matchesStation(config: VinuniStation, station: StationResponseDto): boo
 function buildSite(config: VinuniSiteConfig, records: StationRecord[]): Site {
   const status = siteStatus(records);
   const totalPowerMw = round(
-    records.reduce((sum, record) => sum + powerWatts(record.latest), 0) /
-      1_000_000
-  );
-  const energyGeneration = round(
-    records.reduce((sum, record) => sum + energyMwh(record.latest), 0)
+    records.reduce((sum, record) => sum + systemPowerMw(record.latest), 0)
   );
 
   return {
@@ -133,7 +151,7 @@ function buildSite(config: VinuniSiteConfig, records: StationRecord[]): Site {
     modelUrl: config.site.modelUrl,
     kpi: {
       totalPower: totalPowerMw,
-      energyGeneration,
+      energyGeneration: siteEnergyMwh(records),
       activeTwinAssets: records.length,
       efficiency: availabilityPct(records),
     },
@@ -155,8 +173,8 @@ function buildStationMarkerSite(
     geo: record.config.geo,
     modelUrl: record.config.modelUrl,
     kpi: {
-      totalPower: round(powerWatts(record.latest) / 1_000_000),
-      energyGeneration: energyMwh(record.latest),
+      totalPower: systemPowerMw(record.latest),
+      energyGeneration: round(chargerEnergy(record.latest) / 1000),
       activeTwinAssets: record.devices?.length ?? 1,
       efficiency: record.status === "online" ? 100 : 0,
     },
@@ -214,19 +232,19 @@ const repository: Repository = {
     }
 
     const site = buildSite(config, records);
-    if (siteId !== config.site.id) return { ...site, ...siteExtras(config, records) };
     return { ...site, ...siteExtras(config, records) };
   },
 
-  async getSiteTimeseries(siteId) {
+  async getSiteTimeseries(siteId, metric, range) {
+    const m = toMetric(metric);
     const { records } = await fetchConfiguredStations();
     const station = records.find((record) => record.config.id === siteId);
-    if (station) return fetchPowerHistory(station.config.apiId);
+    if (station) return fetchHistory(station.config.apiId, m, range);
 
     const series = await Promise.all(
-      records.map((record) => fetchPowerHistory(record.config.apiId))
+      records.map((record) => fetchHistory(record.config.apiId, m, range))
     );
-    return mergeSeries(series.flat(), "power");
+    return mergeSeries(series.flat(), m, m === "bess" ? "avg" : "sum");
   },
 
   async getBimTree(): Promise<BimNode> {
@@ -257,21 +275,26 @@ const repository: Repository = {
   async getTwinKpis(): Promise<TwinKpi> {
     const { records } = await fetchConfiguredStations({ latest: true });
     const totalPowerMw = round(
-      records.reduce((sum, record) => sum + powerWatts(record.latest), 0) /
-        1_000_000
+      records.reduce((sum, record) => sum + systemPowerMw(record.latest), 0)
     );
-    const utilization = average(records.map((record) => chargerUtilization(record.latest)));
-    const availability = availabilityPct(records);
+    const solarKw = round(
+      records.reduce((sum, record) => sum + solarGenerationKw(record.latest), 0)
+    );
+    const utilization = average(
+      records.map((record) => chargerUtilization(record.latest))
+    );
+    const soc = average(records.map((record) => bessSoc(record.latest)));
 
     return {
       totalPower: metric("Total Power", totalPowerMw, "MW"),
-      coolingEfficiency: metric("Station Efficiency", availability, "%"),
-      occupancy: metric("Utilization", utilization, "%"),
-      batterySoc: metric("Availability", availability, "%"),
+      coolingEfficiency: metric("Solar Generation", solarKw, "kW"),
+      occupancy: metric("EV Utilization", utilization, "%"),
+      batterySoc: metric("Battery SoC", soc, "%"),
     };
   },
 
   async getAssetDetail(_siteId, assetId): Promise<AssetDetail> {
+    void _siteId;
     const { records } = await fetchConfiguredStations({
       latest: true,
       devices: true,
@@ -291,16 +314,91 @@ const repository: Repository = {
     };
   },
 
-  async getAssetTimeseries(_siteId, assetId) {
+  async getAssetTimeseries(_siteId, assetId, metric, range) {
     void _siteId;
     const config = await loadVinuniSiteConfig();
     const station = config.stations.find((item) => item.id === assetId);
     if (!station) return [];
-    return fetchPowerHistory(station.apiId);
+    return fetchHistory(station.apiId, toMetric(metric), range);
   },
 };
 
 export const webEnergyRepository = repository;
+
+// ---- history fetching -----------------------------------------------------
+
+const HISTORY_ENDPOINT: Record<Metric, string> = {
+  power: API_ENDPOINTS.webEnergy.signalHistorySystem,
+  solar: API_ENDPOINTS.webEnergy.signalHistorySolar,
+  bess: API_ENDPOINTS.webEnergy.signalHistoryBess,
+  charger: API_ENDPOINTS.webEnergy.signalHistoryCharger,
+};
+
+const METRIC_DEVICE_TYPE: Partial<Record<Metric, EnumDeviceType>> = {
+  bess: EnumDeviceType.Bess,
+  charger: EnumDeviceType.Charger,
+};
+
+function toMetric(metric: string): Metric {
+  return (METRICS as string[]).includes(metric) ? (metric as Metric) : "power";
+}
+
+async function resolveDeviceId(
+  apiId: number,
+  metric: Metric
+): Promise<number | undefined> {
+  const deviceType = METRIC_DEVICE_TYPE[metric];
+  if (deviceType === undefined) return undefined;
+  const devices = await fetchDevices(apiId).catch(() => []);
+  return devices.find((device) => device.deviceType === deviceType)?.id;
+}
+
+async function fetchHistory(
+  apiId: number,
+  metric: Metric,
+  range: string
+): Promise<TimeSeriesPoint[]> {
+  const { start, end } = rangeToWindow(range);
+  const deviceId = await resolveDeviceId(apiId, metric);
+  const params = new URLSearchParams({
+    stationId: String(apiId),
+    startTime: start.toISOString(),
+    endTime: end.toISOString(),
+    isTakeSampling: "true",
+  });
+  if (deviceId !== undefined) params.set("deviceId", String(deviceId));
+
+  try {
+    const res = await webEnergyClient.get<SignalHistoryDto>(
+      `${HISTORY_ENDPOINT[metric]}?${params.toString()}`
+    );
+    return historyToSeries(res.list ?? [], SELECTOR[metric], metric);
+  } catch {
+    return [];
+  }
+}
+
+function mergeSeries(
+  points: TimeSeriesPoint[],
+  series: string,
+  mode: "sum" | "avg"
+): TimeSeriesPoint[] {
+  const totals = new Map<number, number>();
+  const counts = new Map<number, number>();
+  for (const point of points) {
+    totals.set(point.t, (totals.get(point.t) ?? 0) + point.value);
+    counts.set(point.t, (counts.get(point.t) ?? 0) + 1);
+  }
+  return [...totals.entries()]
+    .map(([t, value]) => ({
+      t,
+      value: round(mode === "avg" ? value / (counts.get(t) ?? 1) : value),
+      series,
+    }))
+    .sort((a, b) => a.t - b.t);
+}
+
+// ---- detail builders ------------------------------------------------------
 
 function siteExtras(
   config: VinuniSiteConfig,
@@ -366,10 +464,12 @@ function stationSiteExtras(
 
 function stationOverview(record: StationRecord): MetricValue[] {
   return [
-    metric("Power Output", round(powerWatts(record.latest) / 1000), "kW"),
-    metric("Energy Today", energyMwh(record.latest), "MWh"),
-    metric("Devices", record.devices?.length ?? 0),
-    metric("Availability", record.status === "online" ? 100 : 0, "%"),
+    metric("Power Output", systemPowerKw(record.latest), "kW"),
+    metric("Solar Generation", solarGenerationKw(record.latest), "kW"),
+    metric("Battery SoC", bessSoc(record.latest), "%"),
+    metric("Battery Power", bessPowerKw(record.latest), "kW"),
+    metric("EV Utilization", chargerUtilization(record.latest), "%"),
+    metric("Charge Energy", chargerEnergy(record.latest), "kWh"),
   ];
 }
 
@@ -386,53 +486,14 @@ function stationTechnical(record: StationRecord): MetricValue[] {
 }
 
 function stationMaintenance(record: StationRecord): MetricValue[] {
-  const latestTime = latestTimestamp(record.latest);
   return [
     { label: "Created At", value: record.station?.createdAt ?? "-" },
     { label: "Last Updated", value: record.station?.updatedAt ?? "-" },
-    { label: "Latest Signal", value: latestTime ?? "-" },
+    { label: "Latest Signal", value: latestTimestamp(record.latest) ?? "-" },
   ];
 }
 
-async function fetchPowerHistory(apiId: number): Promise<TimeSeriesPoint[]> {
-  const end = new Date();
-  const start = new Date(end.getTime() - 24 * 3600_000);
-  const params = new URLSearchParams({
-    stationId: String(apiId),
-    startTime: start.toISOString(),
-    endTime: end.toISOString(),
-    isTakeSampling: "true",
-  });
-
-  try {
-    const res = await webEnergyClient.get<SignalHistoryDto>(
-      `${API_ENDPOINTS.webEnergy.signalHistorySystem}?${params.toString()}`
-    );
-    return (res.list ?? [])
-      .map((point) => {
-        const time = point.time ?? point.data?.latestTime;
-        return {
-          t: time ? Date.parse(time) : 0,
-          value: round(powerWatts(point) / 1000),
-          series: "power",
-        };
-      })
-      .filter((point) => Number.isFinite(point.t) && point.t > 0)
-      .sort((a, b) => a.t - b.t);
-  } catch {
-    return [];
-  }
-}
-
-function mergeSeries(points: TimeSeriesPoint[], series: string): TimeSeriesPoint[] {
-  const byTime = new Map<number, number>();
-  for (const point of points) {
-    byTime.set(point.t, (byTime.get(point.t) ?? 0) + point.value);
-  }
-  return [...byTime.entries()]
-    .map(([t, value]) => ({ t, value: round(value), series }))
-    .sort((a, b) => a.t - b.t);
-}
+// ---- status / aggregate helpers -------------------------------------------
 
 function stationStatus(
   station?: StationResponseDto,
@@ -477,51 +538,14 @@ function availabilityPct(records: StationRecord[]): number {
   );
 }
 
+function siteEnergyMwh(records: StationRecord[]): number {
+  return round(
+    records.reduce((sum, record) => sum + chargerEnergy(record.latest), 0) / 1000
+  );
+}
+
 function average(values: number[]): number {
   const finite = values.filter((value) => Number.isFinite(value));
   if (!finite.length) return 0;
   return Math.round(finite.reduce((sum, value) => sum + value, 0) / finite.length);
-}
-
-function chargerUtilization(latest?: SignalLatestDto): number {
-  const chargers = payload(latest).charger ?? [];
-  if (!chargers.length) return 0;
-  const active = chargers.filter((charger) => {
-    const state = charger.chargeStatus?.toLowerCase() ?? "";
-    return state.length > 0 && !state.includes("available");
-  }).length;
-  return Math.round((active / chargers.length) * 100);
-}
-
-function energyMwh(latest?: SignalLatestDto): number {
-  const chargers = payload(latest).charger ?? [];
-  const total = chargers.reduce(
-    (sum, charger) =>
-      sum + (charger.totalChargeEnergy ?? charger.lastChargeEnergy ?? 0),
-    0
-  );
-  return round(total > 1000 ? total / 1000 : total);
-}
-
-function powerWatts(
-  input?: SignalLatestDto | SignalHistoryDto | EnergyDataResponseDto
-): number {
-  return payload(input).system?.multimeter?.p ?? 0;
-}
-
-function latestTimestamp(input?: SignalLatestDto): string | undefined {
-  const data = payload(input);
-  return input?.time ?? data.latestTime ?? data.latestOnline;
-}
-
-function payload(
-  input?: SignalLatestDto | SignalHistoryDto | EnergyDataResponseDto
-): EnergyDataResponseDto {
-  if (!input) return {};
-  if ("data" in input && input.data) return input.data;
-  return input as EnergyDataResponseDto;
-}
-
-function round(value: number): number {
-  return Math.round(value * 100) / 100;
 }
