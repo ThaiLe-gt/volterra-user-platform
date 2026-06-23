@@ -1,0 +1,7 @@
+{
+  "origin": { "lng": 105.94542061064729, "lat": 20.989925395134943 },
+  "altitude": 0,
+  "scale": 1,
+  "rotation": { "x": 90, "y": 0, "z": 0 },
+  "camera": { "zoom": 18.5, "groundAngle": 15, "bearing": -146.8 }
+}

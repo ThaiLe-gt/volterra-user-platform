@@ -1,0 +1,30 @@
+{
+  "id": "site-vinuni",
+  "label": "VinUni",
+  "kind": "site",
+  "status": "online",
+  "children": [
+    {
+      "id": "stations",
+      "label": "Stations",
+      "kind": "group",
+      "status": "online",
+      "children": [
+        {
+          "id": "vinuni-station-01",
+          "label": "VinUni Station 01",
+          "kind": "asset",
+          "assetId": "vinuni-station-01",
+          "status": "online"
+        },
+        {
+          "id": "vinuni-station-02",
+          "label": "VinUni Station 02",
+          "kind": "asset",
+          "assetId": "vinuni-station-02",
+          "status": "online"
+        }
+      ]
+    }
+  ]
+}

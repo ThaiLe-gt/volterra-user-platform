@@ -1,0 +1,50 @@
+{
+  "vinuni-station-01": {
+    "id": "vinuni-station-01",
+    "name": "VinUni Station 01",
+    "typeLabel": "Charging Station",
+    "status": "online",
+    "operationalLabel": "Operational",
+    "overview": [
+      { "label": "Power Output", "value": 170, "unit": "kW", "delta": { "pct": 2.4, "direction": "up" } },
+      { "label": "Energy Today", "value": 0.96, "unit": "MWh", "delta": { "pct": 4.1, "direction": "up" } },
+      { "label": "Connector Utilization", "value": 68, "unit": "%", "delta": { "pct": 1.2, "direction": "up" } },
+      { "label": "Availability", "value": 99, "unit": "%", "delta": { "pct": 0.3, "direction": "up" } }
+    ],
+    "technical": [
+      { "label": "Operational Status", "value": "Running" },
+      { "label": "Health Status", "value": "Good" },
+      { "label": "Connector Count", "value": 4 },
+      { "label": "Max Capacity", "value": 180, "unit": "kW" }
+    ],
+    "maintenance": [
+      { "label": "Last Inspection", "value": "2026-06-10" },
+      { "label": "Next Inspection", "value": "2026-07-10" },
+      { "label": "Service Interval", "value": 30, "unit": "days" }
+    ]
+  },
+  "vinuni-station-02": {
+    "id": "vinuni-station-02",
+    "name": "VinUni Station 02",
+    "typeLabel": "Charging Station",
+    "status": "online",
+    "operationalLabel": "Operational",
+    "overview": [
+      { "label": "Power Output", "value": 168, "unit": "kW", "delta": { "pct": 1.9, "direction": "up" } },
+      { "label": "Energy Today", "value": 0.94, "unit": "MWh", "delta": { "pct": 3.8, "direction": "up" } },
+      { "label": "Connector Utilization", "value": 64, "unit": "%", "delta": { "pct": 0.8, "direction": "up" } },
+      { "label": "Availability", "value": 98, "unit": "%", "delta": { "pct": 0.2, "direction": "up" } }
+    ],
+    "technical": [
+      { "label": "Operational Status", "value": "Running" },
+      { "label": "Health Status", "value": "Good" },
+      { "label": "Connector Count", "value": 4 },
+      { "label": "Max Capacity", "value": 180, "unit": "kW" }
+    ],
+    "maintenance": [
+      { "label": "Last Inspection", "value": "2026-06-12" },
+      { "label": "Next Inspection", "value": "2026-07-12" },
+      { "label": "Service Interval", "value": 30, "unit": "days" }
+    ]
+  }
+}

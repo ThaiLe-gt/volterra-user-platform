@@ -1,0 +1,17 @@
+[
+  {
+    "id": "site-vinuni",
+    "name": "VinUni",
+    "code": "VINUNI",
+    "category": "Campus Charging Site",
+    "assetType": "charging-station",
+    "status": "online",
+    "geo": { "lng": 105.94542061064729, "lat": 20.989925395134943 },
+    "kpi": {
+      "totalPower": 0.34,
+      "energyGeneration": 1.9,
+      "activeTwinAssets": 2,
+      "efficiency": 96
+    }
+  }
+]

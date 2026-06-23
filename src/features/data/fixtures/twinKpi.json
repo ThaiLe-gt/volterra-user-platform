@@ -1,0 +1,26 @@
+{
+  "totalPower": {
+    "label": "Total Power",
+    "value": 0.34,
+    "unit": "MW",
+    "delta": { "pct": 2.1, "direction": "up" }
+  },
+  "coolingEfficiency": {
+    "label": "Station Efficiency",
+    "value": 96,
+    "unit": "%",
+    "delta": { "pct": 0.8, "direction": "up" }
+  },
+  "occupancy": {
+    "label": "Utilization",
+    "value": 66,
+    "unit": "%",
+    "delta": { "pct": 1.4, "direction": "up" }
+  },
+  "batterySoc": {
+    "label": "Availability",
+    "value": 99,
+    "unit": "%",
+    "delta": { "pct": 0.2, "direction": "up" }
+  }
+}

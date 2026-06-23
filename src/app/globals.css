@@ -1,0 +1,126 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Dark-first design system tuned to the Volterra digital-twin / portfolio
+  mockups: deep navy canvas, slightly lifted panels, subtle hairline borders,
+  green = online, amber = warning, red = offline, blue = primary action.
+*/
+:root {
+  --radius: 0.75rem;
+
+  --background: #0a0e16;
+  --foreground: #e6ebf2;
+
+  --card: #0f1420;
+  --card-foreground: #e6ebf2;
+
+  --popover: #121826;
+  --popover-foreground: #e6ebf2;
+
+  --primary: #2f80ed;
+  --primary-foreground: #ffffff;
+
+  --secondary: #1a2130;
+  --secondary-foreground: #cdd6e3;
+
+  --muted: #161c28;
+  --muted-foreground: #8b94a7;
+
+  --accent: #1c2433;
+  --accent-foreground: #e6ebf2;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  --border: #1e2736;
+  --input: #232c3d;
+  --ring: #2f80ed;
+
+  /* Domain status + chart palette */
+  --status-online: #2bd576;
+  --status-warning: #f5a623;
+  --status-offline: #6b7488;
+
+  --chart-power: #4f9bff;
+  --chart-airflow: #2bd576;
+  --chart-temp: #f5a623;
+}
+
+.dark {
+  --background: #0a0e16;
+  --foreground: #e6ebf2;
+  --card: #0f1420;
+  --card-foreground: #e6ebf2;
+  --popover: #121826;
+  --popover-foreground: #e6ebf2;
+  --primary: #2f80ed;
+  --primary-foreground: #ffffff;
+  --secondary: #1a2130;
+  --secondary-foreground: #cdd6e3;
+  --muted: #161c28;
+  --muted-foreground: #8b94a7;
+  --accent: #1c2433;
+  --accent-foreground: #e6ebf2;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #1e2736;
+  --input: #232c3d;
+  --ring: #2f80ed;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-online: var(--status-online);
+  --color-warning: var(--status-warning);
+  --color-offline: var(--status-offline);
+  --color-chart-power: var(--chart-power);
+  --color-chart-airflow: var(--chart-airflow);
+  --color-chart-temp: var(--chart-temp);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Mapbox GL controls/labels live outside Tailwind; keep imports per-feature. */
+.mapboxgl-ctrl-logo {
+  display: none !important;
+}
+.mapboxgl-ctrl-icon {
+  display: none !important;
+}

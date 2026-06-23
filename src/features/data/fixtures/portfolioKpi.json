@@ -1,0 +1,9 @@
+{
+  "totalAssets": 2,
+  "countriesCount": 1,
+  "onlineTwins": 2,
+  "onlinePct": 100,
+  "activeAlerts": 0,
+  "efficiencyAvg": 96,
+  "efficiencyDelta": { "pct": 0.8, "direction": "up" }
+}

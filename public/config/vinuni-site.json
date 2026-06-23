@@ -1,0 +1,32 @@
+{
+  "site": {
+    "id": "site-vinuni",
+    "name": "VinUni",
+    "code": "VINUNI",
+    "geo": { "lng": 105.94542061064729, "lat": 20.989925395134943 },
+    "modelUrl": null
+  },
+  "stations": [
+    {
+      "id": "vinuni-station-01",
+      "apiId": 1,
+      "code": "VINUNI-ST01",
+      "name": "VinUni Station 01",
+      "geo": { "lng": 105.94440060179612, "lat": 20.99014325966284 },
+      "modelUrl": "/models/station-1.glb",
+      "transform": {
+        "scale": 0.15,
+        "rotation": { "x": 0, "y": 0, "z": 57 },
+        "offset": { "x": 12, "y": -40.3, "z": 0 }
+      }
+    },
+    {
+      "id": "vinuni-station-02",
+      "apiId": 2,
+      "code": "VINUNI-ST02",
+      "name": "VinUni Station 02",
+      "geo": { "lng": 105.94560061064729, "lat": 20.989795395134943 },
+      "modelUrl": null
+    }
+  ]
+}
