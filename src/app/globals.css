@@ -123,6 +123,28 @@ body {
   color: var(--foreground);
 }
 
+/*
+  Operations single-line diagram: a bright pulse travels along the energized
+  lines to visualize live power flow from source toward load.
+*/
+@keyframes operation-flow {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.operation-flow path {
+  stroke-dasharray: 10 30;
+  stroke-dashoffset: 0;
+  animation: operation-flow 1.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .operation-flow path {
+    animation: none;
+  }
+}
+
 /* Mapbox GL controls/labels live outside Tailwind; keep imports per-feature. */
 .mapboxgl-ctrl-logo {
   display: none !important;

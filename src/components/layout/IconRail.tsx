@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
+  Activity,
   Bell,
   Boxes,
   FileText,
@@ -33,6 +34,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Digital Twin",
     icon: Boxes,
     match: (p) => p.startsWith("/digital-twin"),
+  },
+  {
+    href: ROUTES.operations,
+    label: "Operations",
+    icon: Activity,
+    match: (p) => p.startsWith("/operations"),
   },
   {
     href: "/portfolio",
@@ -72,6 +79,7 @@ export function IconRail() {
               key={`${item.label}-${idx}`}
               href={item.href}
               aria-label={item.label}
+              title={item.label}
               className={cn(
                 "flex size-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
                 active && "bg-accent text-primary",

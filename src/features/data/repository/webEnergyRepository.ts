@@ -4,6 +4,12 @@ import {
   type VinuniSiteConfig,
   type VinuniStation,
 } from "../config/vinuniSiteConfig";
+import {
+  fetchDevices,
+  fetchLatestSignal,
+  fetchStation,
+  fetchStationList,
+} from "../webEnergyTelemetry";
 import { webEnergyClient } from "../webEnergyClient";
 import type {
   AssetDetail,
@@ -84,50 +90,6 @@ async function fetchConfiguredStations(
   );
 
   return { config, records };
-}
-
-async function fetchStationList(): Promise<StationResponseDto[]> {
-  const res = await webEnergyClient.get<StationResponseDto>(
-    `${API_ENDPOINTS.webEnergy.stationList}?Status=1`
-  );
-  return res.list ?? [];
-}
-
-async function fetchStation(apiId: number): Promise<StationResponseDto | undefined> {
-  const res = await webEnergyClient.get<StationResponseDto>(
-    API_ENDPOINTS.webEnergy.stationDetails(apiId)
-  );
-  return res.data;
-}
-
-async function fetchDevices(apiId: number): Promise<DeviceResponseDto[]> {
-  const res = await webEnergyClient.get<DeviceResponseDto>(
-    API_ENDPOINTS.webEnergy.devicesOfStation(apiId)
-  );
-  return res.list ?? [];
-}
-
-/** Latest signal across all telemetry domains (system, solar, BESS, charger). */
-async function fetchLatestSignal(
-  apiId: number
-): Promise<SignalLatestDto | undefined> {
-  const params = new URLSearchParams({
-    stationId: String(apiId),
-    isCheckTime: "true",
-  });
-  for (const deviceType of [
-    EnumDeviceType.CommonSystem,
-    EnumDeviceType.Solar,
-    EnumDeviceType.Bess,
-    EnumDeviceType.Charger,
-  ]) {
-    params.append("deviceType", String(deviceType));
-  }
-
-  const res = await webEnergyClient.get<SignalLatestDto>(
-    `${API_ENDPOINTS.webEnergy.signalLatest}?${params.toString()}`
-  );
-  return res.data;
 }
 
 function matchesStation(config: VinuniStation, station: StationResponseDto): boolean {
