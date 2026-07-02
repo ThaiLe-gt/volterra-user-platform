@@ -180,6 +180,27 @@ export interface ChargerDto extends CommonEnergyData {
   chargeStateOfBattery?: number;
 }
 
+export interface WeatherDto extends CommonEnergyData {
+  temperature?: number;
+  humidity?: number;
+  pressure?: number;
+  windSpeed?: number;
+  windDirection?: number;
+  rainfall?: number;
+  snowfall?: number;
+  precipitationType?: number;
+  electricField?: number;
+  surfaceWetness?: number;
+  soilMoisture?: number;
+  ghi?: number;
+  poAI?: number;
+  diffuseIrradiance?: number;
+  directIrradiance?: number;
+  otherIrradiance?: number;
+  bomTemp1?: number;
+  bomTemp2?: number;
+}
+
 export interface EnergyDataResponseDto {
   latestTime?: string;
   latestOnline?: string;
@@ -189,6 +210,7 @@ export interface EnergyDataResponseDto {
   solar?: SolarDto;
   bess?: BessDto[];
   charger?: ChargerDto[];
+  weather?: WeatherDto;
 }
 
 /**

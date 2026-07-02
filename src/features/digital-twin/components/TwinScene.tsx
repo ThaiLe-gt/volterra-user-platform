@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Map as MapboxMap } from "mapbox-gl";
+import type { IotBubbleConfig } from "@/features/data/config/vinuniSiteConfig";
+import { useOperationSnapshots } from "@/features/operations/hooks/useOperationData";
 import { MapContainer, type StandardConfig } from "@/features/map/components/MapContainer";
 import { MAP_STYLE_STANDARD, hasMapboxToken } from "@/features/map/lib/mapboxConfig";
 import {
@@ -12,9 +14,11 @@ import {
 } from "@/features/bim-viewer";
 import { type TwinSelectionTarget, useTwinStore } from "../store/twinStore";
 import { TwinBottomControls } from "./TwinBottomControls";
+import { buildLiveIotBubbles } from "../lib/iotBubbles";
+import { buildBubbleTelemetryMap } from "../lib/iotBubbleTelemetry";
 
 const STANDARD_CONFIG: StandardConfig = {
-  lightPreset: "dawn",
+  lightPreset: "dusk",
   show3dObjects: true,
   showPlaceLabels: true,
   showPointOfInterestLabels: true,
@@ -24,9 +28,94 @@ const STANDARD_CONFIG: StandardConfig = {
 };
 
 export function TwinScene() {
-  const { selectedAssetId, selectedTarget, setSelectedAssetId } = useTwinStore();
+  const {
+    selectedAssetId,
+    selectedTarget,
+    setDetailTarget,
+    setSelectedAssetId,
+    setSelectedTarget,
+  } = useTwinStore();
   const [map, setMap] = useState<MapboxMap | null>(null);
   const [config, setConfig] = useState<BimConfig | null>(null);
+  const [selectedBubbleId, setSelectedBubbleId] = useState<string | null>(null);
+  const selectedTargetBubbleId =
+    selectedTarget?.kind === "bubble" ? selectedTarget.id : null;
+  const activeBubbleId =
+    selectedTargetBubbleId ??
+    (selectedAssetId &&
+    selectedTarget?.kind === "asset" &&
+    selectedTarget.id === selectedAssetId
+      ? selectedBubbleId
+      : null);
+  const stationIds = useMemo(
+    () => config?.stations.map((station) => station.id) ?? [],
+    [config]
+  );
+  const operationSnapshotResults = useOperationSnapshots(stationIds);
+  const operationSnapshots = useMemo(
+    () =>
+      operationSnapshotResults.flatMap((result) =>
+        result.data ? [result.data] : []
+      ),
+    [operationSnapshotResults]
+  );
+  const bubbles = useMemo(
+    () => (config ? buildLiveIotBubbles(config, operationSnapshots) : []),
+    [config, operationSnapshots]
+  );
+  const bubbleTelemetry = useMemo(
+    () => buildBubbleTelemetryMap(bubbles, operationSnapshots),
+    [bubbles, operationSnapshots]
+  );
+  const selectedBubble = useMemo(
+    () => bubbles.find((bubble) => bubble.id === activeBubbleId) ?? null,
+    [activeBubbleId, bubbles]
+  );
+
+  const selectAsset = useCallback(
+    (assetId: string | null) => {
+      setSelectedBubbleId(null);
+      setSelectedAssetId(assetId);
+      setSelectedTarget(assetId ? { kind: "asset", id: assetId } : null);
+    },
+    [setSelectedAssetId, setSelectedTarget]
+  );
+
+  const selectBubble = useCallback(
+    (bubble: IotBubbleConfig) => {
+      setSelectedBubbleId(bubble.id);
+      setSelectedTarget({
+        kind: "bubble",
+        id: bubble.id,
+        assetId: bubble.assetId,
+      });
+    },
+    [setSelectedTarget]
+  );
+
+  const viewBubbleDetails = useCallback(
+    (bubble: IotBubbleConfig) => {
+      setSelectedBubbleId(bubble.id);
+      setSelectedAssetId(bubble.assetId);
+      setDetailTarget({
+        assetId: bubble.assetId,
+        bubbleId: bubble.id,
+        operationNodeId: bubble.operationNodeId,
+        deviceId: bubble.deviceId,
+      });
+      setSelectedTarget({
+        kind: "bubble",
+        id: bubble.id,
+        assetId: bubble.assetId,
+      });
+    },
+    [setDetailTarget, setSelectedAssetId, setSelectedTarget]
+  );
+
+  const closeBubble = useCallback(() => {
+    setSelectedBubbleId(null);
+    setSelectedTarget(null);
+  }, [setSelectedTarget]);
 
   useEffect(() => {
     let active = true;
@@ -39,7 +128,7 @@ export function TwinScene() {
   }, []);
 
   useEffect(() => {
-    if (!map || !config || !selectedTarget) return;
+    if (!map || !config || !selectedTarget || selectedBubble) return;
     const camera = resolveFocusCamera(config, selectedTarget);
     if (!camera) return;
     map.flyTo({
@@ -47,7 +136,7 @@ export function TwinScene() {
       duration: 900,
       essential: true,
     });
-  }, [config, map, selectedTarget]);
+  }, [config, map, selectedBubble, selectedTarget]);
 
   if (!config) return null;
 
@@ -57,8 +146,14 @@ export function TwinScene() {
         <StandaloneBimCanvas
           config={config}
           selectedAssetId={selectedAssetId}
+          selectedBubbleId={activeBubbleId}
+          bubbles={bubbles}
+          bubbleTelemetry={bubbleTelemetry}
           selectedTarget={selectedTarget}
-          onSelectAsset={setSelectedAssetId}
+          onSelectAsset={selectAsset}
+          onSelectBubble={selectBubble}
+          onCloseBubble={closeBubble}
+          onViewBubbleDetails={viewBubbleDetails}
           className="h-full w-full"
         />
         <div className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2">
@@ -97,7 +192,13 @@ export function TwinScene() {
           map={map}
           config={config}
           selectedAssetId={selectedAssetId}
-          onSelectAsset={setSelectedAssetId}
+          selectedBubbleId={activeBubbleId}
+          bubbles={bubbles}
+          bubbleTelemetry={bubbleTelemetry}
+          onSelectAsset={selectAsset}
+          onSelectBubble={selectBubble}
+          onCloseBubble={closeBubble}
+          onViewBubbleDetails={viewBubbleDetails}
         />
       )}
       <div className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2">

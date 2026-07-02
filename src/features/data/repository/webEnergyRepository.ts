@@ -1,6 +1,7 @@
 import { API_ENDPOINTS } from "@/constants/api";
 import {
   loadVinuniSiteConfig,
+  type IotBubbleConfig,
   type VinuniSiteConfig,
   type VinuniStation,
 } from "../config/vinuniSiteConfig";
@@ -156,6 +157,151 @@ function applySiteFilter(sites: Site[], filter?: SiteFilter): Site[] {
   return filtered;
 }
 
+function stationBubbleNodes(
+  station: VinuniStation,
+  fallbackStatus: AssetStatus,
+  devices: DeviceResponseDto[] = []
+): BimNode[] | undefined {
+  const bubbles = deviceBubbleNodes(station, fallbackStatus, devices);
+  if (!bubbles.length) return undefined;
+
+  return [
+    {
+      id: `${station.id}-devices`,
+      label: "IoT Devices",
+      kind: "system",
+      status: fallbackStatus,
+      children: bubbles,
+    },
+  ];
+}
+
+function deviceBubbleNodes(
+  station: VinuniStation,
+  fallbackStatus: AssetStatus,
+  devices: DeviceResponseDto[]
+): BimNode[] {
+  const configured = station.iotBubbles ?? [];
+  const realNodes = realDeviceBubbleNodes(station, fallbackStatus, devices);
+  if (!realNodes.length) {
+    return configured.map((bubble) => bubbleNode(bubble, fallbackStatus));
+  }
+
+  const realBubbleIds = new Set(realNodes.map((node) => node.bubbleId));
+  const staticNodes = configured
+    .map((bubble) => bubbleNode(bubble, fallbackStatus))
+    .filter((node) => !node.bubbleId || !realBubbleIds.has(node.bubbleId));
+
+  return [...realNodes, ...staticNodes];
+}
+
+function realDeviceBubbleNodes(
+  station: VinuniStation,
+  fallbackStatus: AssetStatus,
+  devices: DeviceResponseDto[]
+): BimNode[] {
+  const groups = groupDevicesForBubbles(devices);
+  return [...groups.entries()].flatMap(([kind, group]) => {
+    const slotId = findBubbleSlotId(station, kind) ?? `${station.id}-${kind}`;
+    return group.map((device, index) => {
+      const operationNodeId = operationNodeIdForDevice(kind, index);
+      const bubbleId = index === 0 ? slotId : `${slotId}-${operationNodeId}`;
+      return {
+        id: `${station.id}-${operationNodeId}`,
+        label: device.deviceName || fallbackBubbleLabel(kind, index),
+        kind: "asset",
+        assetId: station.id,
+        bubbleId,
+        bubbleKind: kind,
+        operationNodeId,
+        deviceId: device.id,
+        status: deviceStatus(device, fallbackStatus),
+      } satisfies BimNode;
+    });
+  });
+}
+
+function bubbleNode(
+  bubble: IotBubbleConfig,
+  fallbackStatus: AssetStatus
+): BimNode {
+  return {
+    id: bubble.id,
+    label: bubble.label,
+    kind: "asset",
+    assetId: bubble.assetId,
+    bubbleId: bubble.id,
+    bubbleKind: bubble.kind,
+    operationNodeId: bubble.operationNodeId,
+    deviceId: bubble.deviceId,
+    status: bubble.status ?? fallbackStatus,
+  };
+}
+
+function groupDevicesForBubbles(
+  devices: DeviceResponseDto[]
+): Map<string, DeviceResponseDto[]> {
+  const groups = new Map<string, DeviceResponseDto[]>();
+  for (const device of devices) {
+    const kind = bubbleKindForDevice(device.deviceType);
+    if (!kind) continue;
+    const items = groups.get(kind) ?? [];
+    items.push(device);
+    groups.set(kind, items);
+  }
+  return groups;
+}
+
+function bubbleKindForDevice(type: EnumDeviceType): string | null {
+  if (type === EnumDeviceType.Grid) return "grid";
+  if (type === EnumDeviceType.Solar) return "solar";
+  if (type === EnumDeviceType.Bess) return "bess";
+  if (type === EnumDeviceType.Charger) return "charger";
+  if (type === EnumDeviceType.Wind) return "wind";
+  if (type === EnumDeviceType.Weather) return "weather";
+  return null;
+}
+
+function findBubbleSlotId(
+  station: VinuniStation,
+  kind: string
+): string | undefined {
+  const slots = station.iotBubbles ?? [];
+  return (
+    slots.find((slot) => slot.kind?.toLowerCase() === kind)?.id ??
+    slots.find((slot) => slot.label.toLowerCase().includes(kind))?.id
+  );
+}
+
+function operationNodeIdForDevice(kind: string, index: number): string {
+  if (kind === "grid") return "grid-card";
+  if (kind === "solar") return "solar-card";
+  if (kind === "wind") return "wind-card";
+  if (kind === "weather") return "weather-card";
+  if (kind === "bess") return `bess-${index + 1}-card`;
+  if (kind === "charger") return `charger-${index + 1}`;
+  return `${kind}-${index + 1}`;
+}
+
+function fallbackBubbleLabel(kind: string, index: number): string {
+  if (kind === "solar") return "PV Solar";
+  if (kind === "bess") return `BESS ${index + 1}`;
+  if (kind === "charger") return `Charger ${index + 1}`;
+  if (kind === "wind") return "Wind Turbine";
+  if (kind === "weather") return "Weather";
+  if (kind === "grid") return "Grid";
+  return kind;
+}
+
+function deviceStatus(
+  device: DeviceResponseDto,
+  fallbackStatus: AssetStatus
+): AssetStatus {
+  if (device.status === 0) return "offline";
+  if (device.status === 1) return "online";
+  return fallbackStatus;
+}
+
 const repository: Repository = {
   async getSites(filter?: SiteFilter) {
     const { config, records } = await fetchConfiguredStations({ latest: true });
@@ -210,7 +356,10 @@ const repository: Repository = {
   },
 
   async getBimTree(): Promise<BimNode> {
-    const { config, records } = await fetchConfiguredStations({ latest: true });
+    const { config, records } = await fetchConfiguredStations({
+      latest: true,
+      devices: true,
+    });
     return {
       id: config.site.id,
       label: config.site.name,
@@ -228,6 +377,11 @@ const repository: Repository = {
             kind: "asset",
             assetId: record.config.id,
             status: record.status,
+            children: stationBubbleNodes(
+              record.config,
+              record.status,
+              record.devices
+            ),
           })),
         },
       ],

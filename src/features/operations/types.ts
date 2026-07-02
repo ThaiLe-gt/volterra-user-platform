@@ -3,11 +3,83 @@ import type { AssetStatus } from "@/features/data/types/domain";
 
 export type OperationControlType = "grid" | "solar" | "bess" | "schedule";
 
-export type OperationNodeKind =
+export type OperationHistoryDomain =
+  | "system"
   | "grid"
+  | "wind"
   | "solar"
   | "bess"
   | "charger"
+  | "weather";
+
+export type OperationWeatherChartField =
+  | "temperature"
+  | "windSpeed"
+  | "ghi"
+  | "poAI"
+  | "bomTemp1";
+
+export type OperationChartAxis = "left" | "right";
+
+export type OperationChartSeriesKind = "line" | "bar";
+
+export interface OperationChartPoint {
+  t: number;
+  [key: string]: number;
+}
+
+export interface OperationChartSeries {
+  key: string;
+  label: string;
+  unit: string;
+  color: string;
+  axis: OperationChartAxis;
+  kind: OperationChartSeriesKind;
+}
+
+export interface OperationSeriesChart {
+  title: string;
+  leftLabel: string;
+  rightLabel?: string;
+  rightDomain?: [number, number];
+  points: OperationChartPoint[];
+  series: OperationChartSeries[];
+}
+
+export interface OperationElectricalCharts {
+  domain: Exclude<OperationHistoryDomain, "weather">;
+  phaseAOnly: boolean;
+  power: OperationSeriesChart;
+  electric: OperationSeriesChart;
+}
+
+export interface OperationWeatherChart {
+  domain: "weather";
+  points: OperationChartPoint[];
+  fields: Record<
+    OperationWeatherChartField,
+    {
+      label: string;
+      unit: string;
+      color: string;
+    }
+  >;
+}
+
+export interface OperationHistoryData {
+  domain: OperationHistoryDomain;
+  electrical?: OperationElectricalCharts;
+  weather?: OperationWeatherChart;
+}
+
+export type OperationNodeKind =
+  | "system"
+  | "grid"
+  | "wind"
+  | "solar"
+  | "bess"
+  | "charger"
+  | "weather"
   | "breaker"
   | "ats"
   | "load"
@@ -26,7 +98,7 @@ export interface OperationNode {
   id: string;
   kind: OperationNodeKind;
   visual: OperationNodeVisual;
-  group: Metric | "grid" | "aux";
+  group: Metric | "grid" | "wind" | "weather" | "aux";
   label: string;
   status: AssetStatus;
   stateLabel: string;
@@ -35,6 +107,7 @@ export interface OperationNode {
   image?: string;
   controlType?: OperationControlType;
   deviceId?: number;
+  historyDomain?: OperationHistoryDomain;
   metric?: Metric;
   muted?: boolean;
 }

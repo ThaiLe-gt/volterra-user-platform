@@ -1,4 +1,4 @@
-import type { GeoPoint } from "../types/domain";
+import type { AssetStatus, GeoPoint } from "../types/domain";
 
 export interface VinuniSiteConfig {
   site: VinuniSite;
@@ -22,6 +22,26 @@ export interface ModelTransformConfig {
   };
 }
 
+export interface IotBubbleConfig {
+  id: string;
+  assetId: string;
+  label: string;
+  kind?: string;
+  status?: AssetStatus;
+  /** Runtime binding to a real operation/device node from the web-energy API. */
+  operationNodeId?: string;
+  deviceId?: number;
+  anchor: {
+    relativeTo: "site" | string;
+    /** Local config-space meters. z is vertical. */
+    position: {
+      x?: number;
+      y?: number;
+      z?: number;
+    };
+  };
+}
+
 export interface VinuniSite {
   id: string;
   name: string;
@@ -29,6 +49,7 @@ export interface VinuniSite {
   geo: GeoPoint;
   modelUrl?: string;
   transform?: ModelTransformConfig;
+  iotBubbles?: IotBubbleConfig[];
 }
 
 export interface VinuniStation {
@@ -41,6 +62,7 @@ export interface VinuniStation {
   geo: GeoPoint;
   modelUrl?: string;
   transform?: ModelTransformConfig;
+  iotBubbles?: IotBubbleConfig[];
 }
 
 export const DEFAULT_VINUNI_SITE_CONFIG: VinuniSiteConfig = {
@@ -100,6 +122,7 @@ function normalizeConfig(input: Partial<VinuniSiteConfig>): VinuniSiteConfig {
           apiId,
           modelUrl: normalizeModelUrl(station.modelUrl),
           transform: normalizeTransform(station.transform),
+          iotBubbles: normalizeIotBubbles(station.iotBubbles),
           geo: {
             ...fallback?.geo,
             ...station.geo,
@@ -115,6 +138,7 @@ function normalizeConfig(input: Partial<VinuniSiteConfig>): VinuniSiteConfig {
       ...site,
       modelUrl: normalizeModelUrl(site.modelUrl),
       transform: normalizeTransform(site.transform),
+      iotBubbles: normalizeIotBubbles(site.iotBubbles),
       geo: {
         ...DEFAULT_VINUNI_SITE_CONFIG.site.geo,
         ...site.geo,
@@ -143,6 +167,47 @@ function normalizeTransform(
   return { scale, rotation, offset };
 }
 
+function normalizeIotBubbles(value: unknown): IotBubbleConfig[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+
+  const bubbles = value.reduce<IotBubbleConfig[]>((acc, item) => {
+    if (!item || typeof item !== "object") return acc;
+    const candidate = item as Partial<IotBubbleConfig>;
+    const id = nonEmptyString(candidate.id);
+    const assetId = nonEmptyString(candidate.assetId);
+    const label = nonEmptyString(candidate.label);
+    const anchor =
+      candidate.anchor && typeof candidate.anchor === "object"
+        ? candidate.anchor
+        : undefined;
+    const relativeTo = nonEmptyString(anchor?.relativeTo);
+    const position = normalizeVector(anchor?.position);
+
+    if (!id || !assetId || !label || !relativeTo || !position) return acc;
+
+    const kind = nonEmptyString(candidate.kind);
+    const status = normalizeStatus(candidate.status);
+    const operationNodeId = nonEmptyString(candidate.operationNodeId);
+    const deviceId = finiteNumber(candidate.deviceId);
+    acc.push({
+      id,
+      assetId,
+      label,
+      ...(kind ? { kind } : {}),
+      ...(status ? { status } : {}),
+      ...(operationNodeId ? { operationNodeId } : {}),
+      ...(deviceId !== undefined ? { deviceId } : {}),
+      anchor: {
+        relativeTo,
+        position,
+      },
+    });
+    return acc;
+  }, []);
+
+  return bubbles.length ? bubbles : undefined;
+}
+
 function normalizeVector(
   value: ModelTransformConfig["rotation"] | ModelTransformConfig["offset"]
 ) {
@@ -158,4 +223,17 @@ function finiteNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value)
     ? value
     : undefined;
+}
+
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : undefined;
+}
+
+function normalizeStatus(value: unknown): AssetStatus | undefined {
+  if (value === "online" || value === "warning" || value === "offline") {
+    return value;
+  }
+  return undefined;
 }

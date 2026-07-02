@@ -18,7 +18,53 @@
         "scale": 0.15,
         "rotation": { "x": 0, "y": 0, "z": 57 },
         "offset": { "x": 12, "y": -40.3, "z": 0 }
-      }
+      },
+      "iotBubbles": [
+        {
+          "id": "station-01-grid",
+          "assetId": "vinuni-station-01",
+          "label": "Grid",
+          "kind": "grid",
+          "status": "online",
+          "anchor": {
+            "relativeTo": "vinuni-station-01",
+            "position": { "x": -28, "y": -10, "z": 34 }
+          }
+        },
+        {
+          "id": "station-01-solar",
+          "assetId": "vinuni-station-01",
+          "label": "PV Solar",
+          "kind": "solar",
+          "status": "online",
+          "anchor": {
+            "relativeTo": "vinuni-station-01",
+            "position": { "x": -8, "y": 16, "z": 38 }
+          }
+        },
+        {
+          "id": "station-01-bess",
+          "assetId": "vinuni-station-01",
+          "label": "BESS",
+          "kind": "bess",
+          "status": "online",
+          "anchor": {
+            "relativeTo": "vinuni-station-01",
+            "position": { "x": 14, "y": -6, "z": 32 }
+          }
+        },
+        {
+          "id": "station-01-charger",
+          "assetId": "vinuni-station-01",
+          "label": "EV Charger",
+          "kind": "charger",
+          "status": "online",
+          "anchor": {
+            "relativeTo": "vinuni-station-01",
+            "position": { "x": 30, "y": 12, "z": 30 }
+          }
+        }
+      ]
     },
     {
       "id": "vinuni-station-02",
@@ -26,7 +72,25 @@
       "code": "VINUNI-ST02",
       "name": "VinUni Station 02",
       "geo": { "lng": 105.94560061064729, "lat": 20.989795395134943 },
-      "modelUrl": null
+      "modelUrl": "/models/station-2.glb",
+      "transform": {
+        "scale": 0.15,
+        "rotation": { "x": 0, "y": 0, "z": 57 },
+        "offset": { "x": 12, "y": -40.3, "z": 0 }
+      },
+      "iotBubbles": [
+        {
+          "id": "station-02-status",
+          "assetId": "vinuni-station-02",
+          "label": "Station 02",
+          "kind": "station",
+          "status": "online",
+          "anchor": {
+            "relativeTo": "vinuni-station-02",
+            "position": { "x": 0, "y": 0, "z": 30 }
+          }
+        }
+      ]
     }
   ]
 }

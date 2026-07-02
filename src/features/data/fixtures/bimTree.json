@@ -15,14 +15,79 @@
           "label": "VinUni Station 01",
           "kind": "asset",
           "assetId": "vinuni-station-01",
-          "status": "online"
+          "status": "online",
+          "children": [
+            {
+              "id": "vinuni-station-01-devices",
+              "label": "IoT Devices",
+              "kind": "system",
+              "status": "online",
+              "children": [
+                {
+                  "id": "station-01-grid",
+                  "label": "Grid",
+                  "kind": "asset",
+                  "assetId": "vinuni-station-01",
+                  "bubbleId": "station-01-grid",
+                  "bubbleKind": "grid",
+                  "status": "online"
+                },
+                {
+                  "id": "station-01-solar",
+                  "label": "PV Solar",
+                  "kind": "asset",
+                  "assetId": "vinuni-station-01",
+                  "bubbleId": "station-01-solar",
+                  "bubbleKind": "solar",
+                  "status": "online"
+                },
+                {
+                  "id": "station-01-bess",
+                  "label": "BESS",
+                  "kind": "asset",
+                  "assetId": "vinuni-station-01",
+                  "bubbleId": "station-01-bess",
+                  "bubbleKind": "bess",
+                  "status": "online"
+                },
+                {
+                  "id": "station-01-charger",
+                  "label": "EV Charger",
+                  "kind": "asset",
+                  "assetId": "vinuni-station-01",
+                  "bubbleId": "station-01-charger",
+                  "bubbleKind": "charger",
+                  "status": "online"
+                }
+              ]
+            }
+          ]
         },
         {
           "id": "vinuni-station-02",
           "label": "VinUni Station 02",
           "kind": "asset",
           "assetId": "vinuni-station-02",
-          "status": "online"
+          "status": "online",
+          "children": [
+            {
+              "id": "vinuni-station-02-devices",
+              "label": "IoT Devices",
+              "kind": "system",
+              "status": "online",
+              "children": [
+                {
+                  "id": "station-02-status",
+                  "label": "Station 02",
+                  "kind": "asset",
+                  "assetId": "vinuni-station-02",
+                  "bubbleId": "station-02-status",
+                  "bubbleKind": "station",
+                  "status": "online"
+                }
+              ]
+            }
+          ]
         }
       ]
     }

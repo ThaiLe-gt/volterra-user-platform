@@ -6,7 +6,6 @@ import { TwinScene } from "./TwinScene";
 import { BimStructureTree } from "./BimStructureTree";
 import { TwinDashboardWidgets } from "./TwinDashboardWidgets";
 import { AssetDetailPanel } from "./AssetDetailPanel";
-import { ViewModeToggle } from "./ViewModeToggle";
 import { useBimTree } from "../hooks/useTwinData";
 import { type TwinPanel, useTwinStore } from "../store/twinStore";
 
@@ -15,7 +14,11 @@ interface TwinViewProps {
 }
 
 export function TwinView({ siteId }: TwinViewProps) {
-  const { activePanel, selectedAssetId, setSelectedAssetId } = useTwinStore();
+  const {
+    activePanel,
+    detailTarget,
+    setDetailTarget,
+  } = useTwinStore();
   const { data: tree } = useBimTree(siteId);
   const title = tree?.label ?? "Digital Twin";
 
@@ -54,23 +57,21 @@ export function TwinView({ siteId }: TwinViewProps) {
         </div>
       </header>
 
-      {/* View-mode toggle under the title */}
-      <div className="absolute left-4 top-20 z-10">
-        <ViewModeToggle />
-      </div>
-
       {/* Switchable BIM structure / widget panel */}
       <div className="absolute bottom-24 left-4 right-4 top-32 z-10 md:bottom-6 md:right-auto md:w-[320px]">
         <TwinSidePanel activePanel={activePanel} siteId={siteId} />
       </div>
 
-      {/* Right asset detail panel */}
-      {selectedAssetId && (
+      {/* Right asset detail panel, opened only from explicit detail actions. */}
+      {detailTarget && (
         <div className="absolute bottom-20 left-2 right-2 top-24 z-20 md:bottom-4 md:left-auto md:right-4 md:top-20">
           <AssetDetailPanel
             siteId={siteId}
-            assetId={selectedAssetId}
-            onClose={() => setSelectedAssetId(null)}
+            assetId={detailTarget.assetId}
+            bubbleId={detailTarget.bubbleId}
+            operationNodeId={detailTarget.operationNodeId}
+            deviceId={detailTarget.deviceId}
+            onClose={() => setDetailTarget(null)}
           />
         </div>
       )}

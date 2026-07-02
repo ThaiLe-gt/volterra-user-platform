@@ -65,13 +65,6 @@ export class SceneManager {
       return;
     }
 
-    const siteLoaded = await this.addModel(
-      config.site.modelUrl ?? config.modelUrl,
-      undefined,
-      config.site.transform
-    );
-    if (!siteLoaded) this.buildSitePlaceholder(config.site.transform);
-
     for (const station of config.stations) {
       const offset = geoOffsetMeters(config.origin, station.geo);
       const position = new Vector3(offset.x, 0, offset.z);
@@ -79,7 +72,7 @@ export class SceneManager {
         station.modelUrl,
         position,
         station.transform,
-        station
+        station,
       );
       if (!loaded) {
         this.buildStationPlaceholder(station, position);
@@ -93,7 +86,7 @@ export class SceneManager {
     modelUrl?: string,
     position?: Vector3,
     transform?: ModelTransformConfig,
-    station?: BimStationConfig
+    station?: BimStationConfig,
   ): Promise<boolean> {
     if (!modelUrl) return false;
     try {
@@ -130,35 +123,9 @@ export class SceneManager {
     });
   }
 
-  private buildSitePlaceholder(transform?: ModelTransformConfig): void {
-    const group = new Group();
-    group.name = "site-placeholder-transform";
-    applyTransform(group, undefined, transform);
-
-    const shell = new Mesh(
-      new BoxGeometry(40, 24, 30),
-      new MeshStandardMaterial({
-        color: new Color("#1b2740"),
-        metalness: 0.2,
-        roughness: 0.7,
-      })
-    );
-    shell.position.set(0, 12, 0);
-    group.add(shell);
-
-    // Secondary wing
-    const wing = new Mesh(
-      new BoxGeometry(18, 14, 22),
-      new MeshStandardMaterial({ color: new Color("#22314f"), roughness: 0.8 })
-    );
-    wing.position.set(-29, 7, 4);
-    group.add(wing);
-    this.modelGroup.add(group);
-  }
-
   private buildStationPlaceholder(
     station: BimStationConfig,
-    position: Vector3
+    position: Vector3,
   ): void {
     const group = new Group();
     group.name = `${station.id}-placeholder-transform`;
@@ -170,7 +137,7 @@ export class SceneManager {
         color: new Color("#3c4f74"),
         metalness: 0.4,
         roughness: 0.5,
-      })
+      }),
     );
     unit.position.set(0, 24 + 1.5, 0);
     unit.name = station.id;
@@ -185,14 +152,13 @@ export class SceneManager {
   }
 
   private buildLegacyPlaceholder(): void {
-    this.buildSitePlaceholder();
     this.buildStationPlaceholder(
       {
         id: "vinuni-station-01",
         name: "VinUni Station 01",
         geo: { lng: 105.94524061064729, lat: 20.990055395134943 },
       },
-      new Vector3(-10, 0, -6)
+      new Vector3(-10, 0, -6),
     );
     this.buildStationPlaceholder(
       {
@@ -200,7 +166,7 @@ export class SceneManager {
         name: "VinUni Station 02",
         geo: { lng: 105.94560061064729, lat: 20.989795395134943 },
       },
-      new Vector3(10, 0, 6)
+      new Vector3(10, 0, 6),
     );
   }
 
@@ -302,7 +268,7 @@ const DEG2RAD = Math.PI / 180;
 function applyTransform(
   object: Object3D,
   position?: Vector3,
-  transform?: ModelTransformConfig
+  transform?: ModelTransformConfig,
 ): void {
   if (position) object.position.copy(position);
   const offset = transform?.offset;
@@ -318,7 +284,7 @@ function applyTransform(
     object.rotation.set(
       (rotation.x ?? 0) * DEG2RAD,
       (rotation.z ?? 0) * DEG2RAD,
-      (rotation.y ?? 0) * DEG2RAD
+      (rotation.y ?? 0) * DEG2RAD,
     );
   }
 
@@ -337,7 +303,7 @@ function configZUpVector(vector: {
 
 function geoOffsetMeters(
   origin: { lng: number; lat: number },
-  geo: { lng: number; lat: number }
+  geo: { lng: number; lat: number },
 ) {
   const metersPerDegreeLat = 111_320;
   const metersPerDegreeLng =

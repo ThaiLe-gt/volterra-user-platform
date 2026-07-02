@@ -10,9 +10,11 @@ import {
 export const OPERATION_LATEST_DEVICE_TYPES = [
   EnumDeviceType.CommonSystem,
   EnumDeviceType.Grid,
+  EnumDeviceType.Wind,
   EnumDeviceType.Solar,
   EnumDeviceType.Bess,
   EnumDeviceType.Charger,
+  EnumDeviceType.Weather,
 ] as const;
 
 export async function fetchStationList(): Promise<StationResponseDto[]> {

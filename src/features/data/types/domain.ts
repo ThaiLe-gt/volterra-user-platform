@@ -105,6 +105,12 @@ export interface BimNode {
   kind: BimNodeKind;
   /** mesh correlation id baked into the GLB (node.name / userData.assetId) */
   assetId?: string;
+  /** Optional IoT bubble id for device-level scene focus. */
+  bubbleId?: string;
+  bubbleKind?: string;
+  /** Live operation node/device binding used to keep tree and bubbles in sync. */
+  operationNodeId?: string;
+  deviceId?: number;
   status?: AssetStatus;
   children?: BimNode[];
 }

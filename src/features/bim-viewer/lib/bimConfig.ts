@@ -2,6 +2,7 @@ import type { AssetStatus, GeoPoint } from "@/features/data/types/domain";
 import {
   DEFAULT_VINUNI_SITE_CONFIG,
   loadVinuniSiteConfig,
+  type IotBubbleConfig,
   type ModelTransformConfig,
 } from "@/features/data/config/vinuniSiteConfig";
 import { TWIN_CAMERA, VINUNI_ORIGIN } from "@/features/map/lib/mapboxConfig";
@@ -29,6 +30,7 @@ export interface BimSiteConfig {
   geo: GeoPoint;
   modelUrl?: string;
   transform?: ModelTransformConfig;
+  iotBubbles?: IotBubbleConfig[];
 }
 
 export interface BimStationConfig {
@@ -40,6 +42,7 @@ export interface BimStationConfig {
   status?: AssetStatus;
   modelUrl?: string;
   transform?: ModelTransformConfig;
+  iotBubbles?: IotBubbleConfig[];
 }
 
 export interface BimConfig {
@@ -102,6 +105,7 @@ export async function loadBimConfig(): Promise<BimConfig> {
         ...json.site,
         geo: { ...base.site.geo, ...json.site?.geo },
         transform: mergeTransform(base.site.transform, json.site?.transform),
+        iotBubbles: json.site?.iotBubbles ?? base.site.iotBubbles,
       },
       stations: mergeStations(base.stations, json.stations),
       origin: { ...base.origin, ...json.origin },
@@ -166,6 +170,7 @@ function mergeStations(
       ...override,
       geo: { ...base.geo, ...override.geo },
       transform: mergeTransform(base.transform, override.transform),
+      iotBubbles: override.iotBubbles ?? base.iotBubbles,
     };
   });
 }

@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
     signalHistorical: "/signal/historical-list",
     signalHistorySystem: "/signal/list-system-energy",
     signalHistoryGrid: "/signal/list-grid",
+    signalHistoryWind: "/signal/list-wind",
     signalHistorySolar: "/signal/list-solar",
     signalHistoryBess: "/signal/list-bess",
     signalHistoryCharger: "/signal/list-charger",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { REALTIME_POLL_INTERVAL_MS } from "@/lib/queryClient";
 import {
   buildMockOperationSnapshot,
@@ -34,5 +34,19 @@ export function useOperationSnapshot(stationId: string | null) {
         : Promise.resolve(buildMockOperationSnapshot(stationId ?? undefined)),
     enabled: !!stationId,
     refetchInterval: REALTIME_POLL_INTERVAL_MS,
+  });
+}
+
+export function useOperationSnapshots(stationIds: string[]) {
+  return useQueries({
+    queries: stationIds.map((stationId) => ({
+      queryKey: ["operations", "snapshot", DATA_SOURCE, stationId],
+      queryFn: () =>
+        OPERATIONS_CONTROLS_ENABLED
+          ? getWebEnergyOperationSnapshot(stationId)
+          : Promise.resolve(buildMockOperationSnapshot(stationId)),
+      enabled: stationId.length > 0,
+      refetchInterval: REALTIME_POLL_INTERVAL_MS,
+    })),
   });
 }

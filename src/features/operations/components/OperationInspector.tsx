@@ -2,28 +2,21 @@
 
 import { useState } from "react";
 import { Lock, LockOpen, ShieldCheck } from "lucide-react";
-import { MiniLineChart } from "@/components/common/MiniLineChart";
-import {
-  METRIC_COLOR,
-  METRIC_LABEL,
-  METRIC_UNIT,
-  type Metric,
-} from "@/components/common/MetricToggle";
-import { RangeToggle, type ChartRange } from "@/components/common/RangeToggle";
+import type { ChartRange } from "@/components/common/RangeToggle";
 import { StatusDot } from "@/components/common/StatusDot";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DEFAULT_TWIN_SITE_ID } from "@/constants/routes";
-import { useAssetTimeseries } from "@/features/digital-twin/hooks/useTwinData";
 import type { StationControlContext } from "@/features/digital-twin/hooks/useDeviceControl";
 import { GridControl } from "@/features/digital-twin/components/control/GridControl";
 import { SolarControl } from "@/features/digital-twin/components/control/SolarControl";
 import { BessControl } from "@/features/digital-twin/components/control/BessControl";
 import { ChargeDischargeControl } from "@/features/digital-twin/components/control/ChargeDischargeControl";
 import { cn } from "@/lib/utils";
+import { useOperationHistory } from "../hooks/useOperationHistory";
 import type { OperationNode, OperationSnapshot } from "../types";
+import { OperationHistoryCharts } from "./OperationHistoryCharts";
 
 interface OperationInspectorProps {
   snapshot: OperationSnapshot;
@@ -43,11 +36,9 @@ export function OperationInspector({
   loading = false,
 }: OperationInspectorProps) {
   const [range, setRange] = useState<ChartRange>("5h");
-  const chartMetric = nodeToMetric(node);
-  const { data: series } = useAssetTimeseries(
-    DEFAULT_TWIN_SITE_ID,
-    snapshot.station.id,
-    chartMetric,
+  const { data: history, isLoading: historyLoading } = useOperationHistory(
+    snapshot.station.apiId,
+    node,
     range
   );
   const deviceId = resolveControlDeviceId(node, controlContext);
@@ -122,29 +113,12 @@ export function OperationInspector({
                 ))}
               </section>
 
-              <section className="rounded-lg border border-border/60 bg-background/40 p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-foreground">
-                      Real-time Data
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {METRIC_LABEL[chartMetric]} history
-                    </div>
-                  </div>
-                  <RangeToggle value={range} onChange={setRange} />
-                </div>
-                <div className="mt-3">
-                  <MiniLineChart
-                    data={series ?? []}
-                    height={190}
-                    variant="detail"
-                    color={METRIC_COLOR[chartMetric]}
-                    label={METRIC_LABEL[chartMetric]}
-                    unit={METRIC_UNIT[chartMetric]}
-                  />
-                </div>
-              </section>
+              <OperationHistoryCharts
+                data={history}
+                loading={historyLoading}
+                range={range}
+                onRangeChange={setRange}
+              />
             </div>
           </ScrollArea>
         </TabsContent>
@@ -287,14 +261,6 @@ function resolveControlDeviceId(
   if (node.controlType === "grid") return context?.gridDeviceId;
   if (node.controlType === "solar") return context?.solarDeviceId;
   return context?.bessDeviceId;
-}
-
-function nodeToMetric(node: OperationNode | null): Metric {
-  if (node?.metric) return node.metric;
-  if (node?.group === "solar") return "solar";
-  if (node?.group === "bess") return "bess";
-  if (node?.group === "charger") return "charger";
-  return "power";
 }
 
 function formatDateTime(value?: string): string {

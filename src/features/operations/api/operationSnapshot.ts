@@ -136,7 +136,9 @@ function buildNodes(
   devices: DeviceResponseDto[]
 ): OperationNode[] {
   const gridDevice = firstDevice(devices, EnumDeviceType.Grid);
+  const windDevice = firstDevice(devices, EnumDeviceType.Wind);
   const solarDevice = firstDevice(devices, EnumDeviceType.Solar);
+  const weatherDevice = firstDevice(devices, EnumDeviceType.Weather);
   const bessDevices = devices.filter((device) => device.deviceType === EnumDeviceType.Bess);
   const chargerDevices = devices.filter(
     (device) => device.deviceType === EnumDeviceType.Charger
@@ -148,7 +150,19 @@ function buildNodes(
     gridNode(data, gridDevice),
     solarNode(data, solarDevice),
     ...bessNodes(bessList, bessDevices),
-    breakerNode("grid-mccb", "Grid MCCB", 356, 82, "grid", "grid", gridDevice?.id),
+    windNode(data, windDevice),
+    weatherNode(data, weatherDevice),
+    breakerNode(
+      "grid-mccb",
+      "Grid MCCB",
+      356,
+      82,
+      "grid",
+      "grid",
+      gridDevice?.id,
+      false,
+      "grid"
+    ),
     breakerNode(
       "solar-mccb",
       "Solar MCCB",
@@ -156,10 +170,12 @@ function buildNodes(
       222,
       "solar",
       "solar",
-      solarDevice?.id
+      solarDevice?.id,
+      false,
+      "solar"
     ),
     ...bessBreakerNodes(bessList, bessDevices),
-    breakerNode("plc-mccb", "PLC MCCB", 356, 622, "aux"),
+    breakerNode("plc-mccb", "PLC MCCB", 356, 622, "aux", undefined, undefined, false, "system"),
     atsNode("ats-1", "ATS 01", 520, 245, bessDevices[0]?.id),
     atsNode("ats-2", "ATS 02", 520, 460, bessDevices[1]?.id ?? bessDevices[0]?.id),
     ...chargerBreakerNodes(chargerList, chargerDevices),
@@ -172,7 +188,8 @@ function buildNodes(
       label: "PLC & Auxiliaries",
       status: data.system?.plc?.communication === false ? "offline" : "online",
       stateLabel: plcStatusLabel(data),
-      position: { x: 222, y: 646 },
+      historyDomain: "system",
+      position: { x: 44, y: 648 },
       telemetry: [
         { label: "PLC status", value: plcStatusLabel(data) },
         {
@@ -201,6 +218,7 @@ function gridNode(
     metric: "power",
     controlType: "grid",
     deviceId: device?.id ?? data.grid?.deviceId,
+    historyDomain: "grid",
     position: { x: 44, y: 76 },
     image: `${ASSET_BASE}/eMccb.png`,
     telemetry: powerRows(multimeter),
@@ -223,6 +241,7 @@ function solarNode(
     metric: "solar",
     controlType: "solar",
     deviceId: device?.id ?? data.solar?.deviceId,
+    historyDomain: "solar",
     position: { x: 44, y: 216 },
     image: `${ASSET_BASE}/ePvSolar.png`,
     telemetry: [
@@ -237,6 +256,72 @@ function solarNode(
         unit: "kVar",
       },
       { label: "Energy today", value: formatNumber(data.solar?.energyTimeStamps), unit: "kWh" },
+    ],
+  };
+}
+
+function windNode(
+  data: EnergyDataResponseDto,
+  device?: DeviceResponseDto
+): OperationNode {
+  const status = nodeStatus(data.wind?.status, device, !data.wind && !device);
+  return {
+    id: "wind-card",
+    kind: "wind",
+    visual: "pill",
+    group: "wind",
+    label: "Wind Turbine",
+    status,
+    stateLabel: status === "offline" ? "Unavailable" : "Generating",
+    historyDomain: "wind",
+    muted: status === "offline",
+    deviceId: device?.id ?? data.wind?.deviceId,
+    position: { x: 214, y: 24 },
+    telemetry: [
+      {
+        label: "Active power",
+        value: formatNumber((data.wind?.multimeter?.p ?? 0) / 1000),
+        unit: "kW",
+      },
+      {
+        label: "Reactive power",
+        value: formatNumber((data.wind?.multimeter?.q ?? 0) / 1000),
+        unit: "kVar",
+      },
+      { label: "Voltage", value: formatNumber(data.wind?.multimeter?.ua, 1), unit: "V" },
+    ],
+  };
+}
+
+function weatherNode(
+  data: EnergyDataResponseDto,
+  device?: DeviceResponseDto
+): OperationNode {
+  const status = nodeStatus(data.weather?.status, device, !data.weather && !device);
+  return {
+    id: "weather-card",
+    kind: "weather",
+    visual: "pill",
+    group: "weather",
+    label: "Weather",
+    status,
+    stateLabel: status === "offline" ? "Unavailable" : "Online",
+    historyDomain: "weather",
+    muted: status === "offline",
+    deviceId: device?.id ?? data.weather?.deviceId,
+    position: { x: 374, y: 24 },
+    telemetry: [
+      {
+        label: "Air temperature",
+        value: formatNumber((data.weather?.temperature ?? 0) / 10, 1),
+        unit: "C",
+      },
+      {
+        label: "Wind speed",
+        value: formatNumber(data.weather?.windSpeed, 1),
+        unit: "m/s",
+      },
+      { label: "GHI", value: formatNumber(data.weather?.ghi, 0), unit: "W/m2" },
     ],
   };
 }
@@ -262,6 +347,7 @@ function bessNodes(
       controlType: "bess",
       muted: status === "offline",
       deviceId: device?.id ?? unit?.deviceId,
+      historyDomain: "bess",
       position: { x: 44, y: 356 + index * 140 },
       image: `${ASSET_BASE}/eBess.png`,
       telemetry: [
@@ -292,7 +378,8 @@ function bessBreakerNodes(
       "bess",
       "bess",
       devices[index]?.id ?? bessList[index]?.deviceId,
-      muted
+      muted,
+      "bess"
     );
   });
 }
@@ -311,7 +398,8 @@ function chargerBreakerNodes(
       "charger",
       undefined,
       devices[index]?.id ?? chargers[index]?.deviceId,
-      !chargers[index] && !devices[index]
+      !chargers[index] && !devices[index],
+      "charger"
     )
   );
 }
@@ -342,6 +430,7 @@ function chargerNodes(
       metric: "charger",
       muted: status === "offline",
       deviceId: device?.id ?? charger?.deviceId,
+      historyDomain: "charger",
       position: { x: 914, y: 72 + index * 150 },
       image: `${ASSET_BASE}/chargerModel/${dc ? "Kern-C230" : "AC006T222"}.png`,
       telemetry: [
@@ -369,7 +458,8 @@ function breakerNode(
   group: OperationNode["group"],
   controlType?: OperationNode["controlType"],
   deviceId?: number,
-  muted = false
+  muted = false,
+  historyDomain?: OperationNode["historyDomain"]
 ): OperationNode {
   return {
     id,
@@ -382,6 +472,7 @@ function breakerNode(
     controlType,
     muted,
     deviceId,
+    historyDomain,
     position: { x, y },
     image: `${ASSET_BASE}/eMccb.png`,
     telemetry: [
@@ -402,6 +493,7 @@ function atsNode(id: string, label: string, x: number, y: number, deviceId?: num
     stateLabel: "ON",
     controlType: "schedule" as const,
     deviceId,
+    historyDomain: "bess" as const,
     position: { x, y },
     telemetry: [
       { label: "Primary path", value: "Closed" },

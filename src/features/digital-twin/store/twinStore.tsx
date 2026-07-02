@@ -13,6 +13,16 @@ export type TwinPanel = "structure" | "widgets";
 export type TwinSelectionTarget =
   | { kind: "site"; id: string }
   | { kind: "asset"; id: string }
+  | { kind: "bubble"; id: string; assetId: string }
+  | null;
+
+export type TwinDetailTarget =
+  | {
+      assetId: string;
+      bubbleId?: string;
+      operationNodeId?: string;
+      deviceId?: number;
+    }
   | null;
 
 export interface TwinStore {
@@ -22,6 +32,8 @@ export interface TwinStore {
   setSelectedTarget: (target: TwinSelectionTarget) => void;
   selectedAssetId: string | null;
   setSelectedAssetId: (id: string | null) => void;
+  detailTarget: TwinDetailTarget;
+  setDetailTarget: (target: TwinDetailTarget) => void;
 }
 
 const TwinContext = createContext<TwinStore | null>(null);
@@ -36,6 +48,8 @@ export function TwinProvider({ children }: { children: React.ReactNode }) {
       kind: "asset",
       id: "vinuni-station-01",
     });
+  const [detailTarget, setDetailTargetState] =
+    useState<TwinDetailTarget>(null);
 
   const setSelectedAssetId = useCallback((id: string | null) => {
     setSelectedAssetIdState(id);
@@ -43,6 +57,10 @@ export function TwinProvider({ children }: { children: React.ReactNode }) {
 
   const setSelectedTarget = useCallback((target: TwinSelectionTarget) => {
     setSelectedTargetState(target);
+  }, []);
+
+  const setDetailTarget = useCallback((target: TwinDetailTarget) => {
+    setDetailTargetState(target);
   }, []);
 
   const value = useMemo(
@@ -53,6 +71,8 @@ export function TwinProvider({ children }: { children: React.ReactNode }) {
       setSelectedTarget,
       selectedAssetId,
       setSelectedAssetId,
+      detailTarget,
+      setDetailTarget,
     }),
     [
       activePanel,
@@ -60,6 +80,8 @@ export function TwinProvider({ children }: { children: React.ReactNode }) {
       setSelectedTarget,
       selectedAssetId,
       setSelectedAssetId,
+      detailTarget,
+      setDetailTarget,
     ]
   );
 

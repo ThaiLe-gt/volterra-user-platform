@@ -2,16 +2,10 @@
 
 import { useState } from "react";
 import {
-  BatteryCharging,
   Bell,
   ChevronDown,
-  Home,
-  Info,
   Lock,
   LockOpen,
-  Network,
-  PlugZap,
-  Sun,
 } from "lucide-react";
 import { StatusDot } from "@/components/common/StatusDot";
 import { Switch } from "@/components/ui/switch";
@@ -27,28 +21,29 @@ import { OperationDiagram } from "./OperationDiagram";
 import { OperationInspector } from "./OperationInspector";
 
 type OperationMode =
-  | "dashboard"
+  | "all"
   | "distribution"
+  | "wind"
   | "solar"
   | "bess"
   | "charger"
-  | "introduction";
+  | "weather";
 
 const MODES: Array<{
   value: OperationMode;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
 }> = [
-  { value: "dashboard", label: "Dashboard", icon: Home },
-  { value: "distribution", label: "Distribution", icon: Network },
-  { value: "solar", label: "PV Solar", icon: Sun },
-  { value: "bess", label: "BESS", icon: BatteryCharging },
-  { value: "charger", label: "Charger", icon: PlugZap },
-  { value: "introduction", label: "Introduction", icon: Info },
+  { value: "all", label: "All" },
+  { value: "distribution", label: "Distribution" },
+  { value: "wind", label: "Wind Turbine" },
+  { value: "solar", label: "PV Solar" },
+  { value: "bess", label: "BESS" },
+  { value: "charger", label: "Charger" },
+  { value: "weather", label: "Weather" },
 ];
 
 export function OperationsView() {
-  const [mode, setMode] = useState<OperationMode>("distribution");
+  const [mode, setMode] = useState<OperationMode>("all");
   const [stationOverride, setStationOverride] = useState<string | null>(null);
   const [nodeOverride, setNodeOverride] = useState<string | null>(null);
   const [controlsUnlocked, setControlsUnlocked] = useState(false);
@@ -73,7 +68,7 @@ export function OperationsView() {
   const selectedNode =
     snapshot?.nodes.find((node) => node.id === selectedNodeId) ?? null;
 
-  const focusGroup = modeToFocusGroup(mode);
+  const focusGroups = modeToFocusGroups(mode);
   const canUnlock = OPERATIONS_CONTROLS_ENABLED && !snapshot?.readOnly;
   const activeStation = stations.find((s) => s.id === selectedStationId);
 
@@ -94,7 +89,10 @@ export function OperationsView() {
             <OperationDiagram
               snapshot={snapshot}
               selectedNodeId={selectedNodeId}
-              focusGroup={focusGroup}
+              focusGroups={focusGroups}
+              mode={mode}
+              modeOptions={MODES}
+              onModeChange={(value) => setMode(value as OperationMode)}
               onSelect={setNodeOverride}
             />
           ) : (
@@ -188,32 +186,6 @@ export function OperationsView() {
         </div>
       </header>
 
-      {/* Floating mode toggle */}
-      <div className="pointer-events-none absolute left-4 top-20 z-20 max-w-[calc(100vw-2rem)]">
-        <div className="pointer-events-auto flex gap-1 overflow-x-auto rounded-xl border border-border bg-card/85 p-1 backdrop-blur-sm">
-          {MODES.map((item) => {
-            const Icon = item.icon;
-            const active = mode === item.value;
-            return (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => setMode(item.value)}
-                className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                )}
-              >
-                <Icon className="size-4" />
-                <span className="hidden sm:inline">{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Floating KPI strip */}
       {snapshot && snapshot.kpis.length > 0 && (
         <div className="pointer-events-none absolute bottom-4 left-1/2 z-20 max-w-[calc(100vw-2rem)] -translate-x-1/2 2xl:left-[calc(50%-220px)]">
@@ -298,10 +270,13 @@ function ErrorPanel({ message }: { message: string }) {
   );
 }
 
-function modeToFocusGroup(mode: OperationMode): OperationNode["group"] | null {
-  if (mode === "solar") return "solar";
-  if (mode === "bess") return "bess";
-  if (mode === "charger") return "charger";
+function modeToFocusGroups(mode: OperationMode): OperationNode["group"][] | null {
+  if (mode === "distribution") return ["power", "grid", "aux"];
+  if (mode === "wind") return ["wind"];
+  if (mode === "solar") return ["solar"];
+  if (mode === "bess") return ["bess"];
+  if (mode === "charger") return ["charger"];
+  if (mode === "weather") return ["weather"];
   return null;
 }
 

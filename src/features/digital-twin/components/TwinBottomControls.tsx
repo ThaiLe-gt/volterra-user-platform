@@ -93,7 +93,7 @@ export function TwinBottomControls({
 }: TwinBottomControlsProps) {
   const { activePanel, setActivePanel } = useTwinStore();
   const [preset, setPreset] = useState<LightPreset>(
-    initial?.lightPreset ?? "dawn"
+    initial?.lightPreset ?? "dusk"
   );
   const [layers, setLayers] = useState<LayerState>(() =>
     getInitialLayers(initial)

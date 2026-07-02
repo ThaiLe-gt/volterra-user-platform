@@ -1,4 +1,8 @@
-import type { OperationSnapshot, OperationStationOption } from "../types";
+import type {
+  OperationNode,
+  OperationSnapshot,
+  OperationStationOption,
+} from "../types";
 
 const ASSET_BASE = "/operation-assets/energy";
 
@@ -57,6 +61,7 @@ export function buildMockOperationSnapshot(
         stateLabel: "Generating",
         metric: "power",
         controlType: "grid",
+        historyDomain: "grid",
         position: { x: 44, y: 76 },
         image: `${ASSET_BASE}/eMccb.png`,
         telemetry: [
@@ -75,6 +80,7 @@ export function buildMockOperationSnapshot(
         stateLabel: "Generating",
         metric: "solar",
         controlType: "solar",
+        historyDomain: "solar",
         position: { x: 44, y: 216 },
         image: `${ASSET_BASE}/ePvSolar.png`,
         telemetry: [
@@ -93,6 +99,7 @@ export function buildMockOperationSnapshot(
         stateLabel: "Generating",
         metric: "bess",
         controlType: "bess",
+        historyDomain: "bess",
         position: { x: 44, y: 356 },
         image: `${ASSET_BASE}/eBess.png`,
         telemetry: [
@@ -112,6 +119,7 @@ export function buildMockOperationSnapshot(
         metric: "bess",
         controlType: "bess",
         muted: stationTwo,
+        historyDomain: "bess",
         position: { x: 44, y: 496 },
         image: `${ASSET_BASE}/eBess.png`,
         telemetry: [
@@ -136,6 +144,39 @@ export function buildMockOperationSnapshot(
       chargerNode("charger-3", "Charger 3 AC", 914, 372, !stationTwo, stationTwo),
       chargerNode("charger-4", "Charger 4 DC", 914, 522, true, true),
       {
+        id: "wind-card",
+        kind: "wind",
+        visual: "pill",
+        group: "wind",
+        label: "Wind Turbine",
+        status: stationTwo ? "offline" : "online",
+        stateLabel: stationTwo ? "Unavailable" : "Generating",
+        historyDomain: "wind",
+        muted: stationTwo,
+        position: { x: 214, y: 24 },
+        telemetry: [
+          { label: "Active power", value: stationTwo ? "0" : "0.12", unit: "kW" },
+          { label: "Reactive power", value: stationTwo ? "0" : "-0.05", unit: "kVar" },
+          { label: "Voltage", value: stationTwo ? "0" : "226.3", unit: "V" },
+        ],
+      },
+      {
+        id: "weather-card",
+        kind: "weather",
+        visual: "pill",
+        group: "weather",
+        label: "Weather",
+        status: "online",
+        stateLabel: "Online",
+        historyDomain: "weather",
+        position: { x: 374, y: 24 },
+        telemetry: [
+          { label: "Air temperature", value: stationTwo ? "30.1" : "28.6", unit: "C" },
+          { label: "Wind speed", value: stationTwo ? "4.2" : "3.7", unit: "m/s" },
+          { label: "GHI", value: stationTwo ? "690" : "742", unit: "W/m2" },
+        ],
+      },
+      {
         id: "plc-aux",
         kind: "plc",
         visual: "pill",
@@ -143,7 +184,8 @@ export function buildMockOperationSnapshot(
         label: "PLC & Auxiliaries",
         status: "online",
         stateLabel: "ON",
-        position: { x: 222, y: 646 },
+        historyDomain: "system",
+        position: { x: 44, y: 648 },
         telemetry: [
           { label: "PLC status", value: "Working" },
           { label: "Auxiliary bus", value: "ON" },
@@ -160,7 +202,7 @@ function breakerNode(
   y: number,
   group: "grid" | "solar" | "bess" | "charger" | "aux",
   muted = false
-) {
+): OperationNode {
   return {
     id,
     kind: "breaker" as const,
@@ -171,6 +213,7 @@ function breakerNode(
     stateLabel: muted ? "OFF" : "ON",
     controlType:
       group === "grid" || group === "solar" || group === "bess" ? group : undefined,
+    historyDomain: historyDomainForGroup(group),
     muted,
     position: { x, y },
     image: `${ASSET_BASE}/eMccb.png`,
@@ -179,6 +222,16 @@ function breakerNode(
       { label: "Command", value: muted ? "Locked" : "Ready" },
     ],
   };
+}
+
+function historyDomainForGroup(
+  group: "grid" | "solar" | "bess" | "charger" | "aux"
+): OperationNode["historyDomain"] {
+  if (group === "grid") return "grid";
+  if (group === "solar") return "solar";
+  if (group === "bess") return "bess";
+  if (group === "charger") return "charger";
+  return "system";
 }
 
 function atsNode(id: string, label: string, x: number, y: number) {
@@ -191,6 +244,7 @@ function atsNode(id: string, label: string, x: number, y: number) {
     status: "online" as const,
     stateLabel: "ON",
     controlType: "schedule" as const,
+    historyDomain: "bess" as const,
     position: { x, y },
     telemetry: [
       { label: "Primary path", value: "Closed" },
@@ -216,6 +270,7 @@ function chargerNode(
     status: available ? ("online" as const) : ("offline" as const),
     stateLabel: available ? "Available" : "Unavailable",
     metric: "charger" as const,
+    historyDomain: "charger" as const,
     muted: !available,
     position: { x, y },
     image: `${ASSET_BASE}/chargerModel/${dc ? "Kern-C230" : "AC006T222"}.png`,

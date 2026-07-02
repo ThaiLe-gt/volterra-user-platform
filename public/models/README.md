@@ -22,6 +22,31 @@ Config transforms are Z-up: `offset.z` moves upward, and `rotation.z` is yaw
 around the vertical axis. `offset` is in meters, `rotation` is in degrees, and
 these values apply only to that site or station model.
 
+## IoT bubbles
+
+Clickable Digital Twin IoT bubbles are configured beside the site or station in
+`public/config/vinuni-site.json`:
+
+```json
+"iotBubbles": [
+  {
+    "id": "station-01-bess",
+    "assetId": "vinuni-station-01",
+    "label": "BESS",
+    "kind": "bess",
+    "status": "online",
+    "anchor": {
+      "relativeTo": "vinuni-station-01",
+      "position": { "x": 0, "y": 0, "z": 4 }
+    }
+  }
+]
+```
+
+`position` uses the same Z-up local coordinate convention as model transforms.
+For v1, `assetId` should point to an existing BIM asset id so the right detail
+panel can open.
+
 ## DRACO-compressed models
 
 If your GLB uses DRACO compression, copy the decoder into `public/draco/`:
