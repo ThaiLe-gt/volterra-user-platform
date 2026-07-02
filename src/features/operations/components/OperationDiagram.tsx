@@ -1,10 +1,19 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ChevronDown, Maximize, RotateCcw, Minus, Plus } from "lucide-react";
+import {
+  ChevronDown,
+  Lock,
+  LockOpen,
+  Maximize,
+  Minus,
+  Plus,
+  RotateCcw,
+} from "lucide-react";
 import { StatusDot } from "@/components/common/StatusDot";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { OperationNode, OperationSnapshot } from "../types";
 
@@ -15,6 +24,12 @@ interface OperationDiagramProps {
   mode: string;
   modeOptions: Array<{ value: string; label: string }>;
   onModeChange: (mode: string) => void;
+  stationId: string | null;
+  stationOptions: Array<{ id: string; name: string }>;
+  onStationChange: (stationId: string) => void;
+  canUnlockControls: boolean;
+  controlsUnlocked: boolean;
+  onControlsUnlockedChange: (unlocked: boolean) => void;
   onSelect: (nodeId: string) => void;
 }
 
@@ -44,6 +59,10 @@ const FLOW_PATHS = [
   "M808 600 H902",
 ] as const;
 
+const DIAGRAM_WIDTH = 1180;
+const DIAGRAM_HEIGHT = 720;
+const FIT_PADDING = 0.96;
+
 export function OperationDiagram({
   snapshot,
   selectedNodeId,
@@ -51,6 +70,12 @@ export function OperationDiagram({
   mode,
   modeOptions,
   onModeChange,
+  stationId,
+  stationOptions,
+  onStationChange,
+  canUnlockControls,
+  controlsUnlocked,
+  onControlsUnlockedChange,
   onSelect,
 }: OperationDiagramProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -59,15 +84,17 @@ export function OperationDiagram({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-  const fitToScreen = () => {
-    if (!containerRef.current) return;
+  const getFitZoom = () => {
+    if (!containerRef.current) return 100;
     const rect = containerRef.current.getBoundingClientRect();
-    const scaleX = rect.width / 1180;
-    const scaleY = rect.height / 720;
-    const padding = 1.0;
-    const fitScale = Math.min(scaleX, scaleY) * padding;
-    const clampedScale = Math.max(0.5, Math.min(2.0, fitScale));
-    setZoom(Math.round(clampedScale * 100));
+    const scaleX = Math.max(0, rect.width - 32) / DIAGRAM_WIDTH;
+    const scaleY = Math.max(0, rect.height - 32) / DIAGRAM_HEIGHT;
+    const fitScale = Math.min(scaleX, scaleY) * FIT_PADDING;
+    return Math.round(Math.max(0.5, Math.min(2, fitScale)) * 100);
+  };
+
+  const fitToScreen = () => {
+    setZoom(getFitZoom());
     setPan({ x: 0, y: 0 });
   };
 
@@ -134,35 +161,95 @@ export function OperationDiagram({
     });
   };
 
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    let frame = 0;
+    const fit = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        setZoom(getFitZoom());
+        setPan({ x: 0, y: 0 });
+      });
+    };
+
+    const observer = new ResizeObserver(fit);
+    observer.observe(node);
+    fit();
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <div
       ref={containerRef}
-      className="relative w-full rounded-2xl border border-border bg-card/40 shadow-2xl shadow-black/30 backdrop-blur-sm overflow-hidden select-none"
-      style={{ height: "720px" }}>
-      {/* Diagram scope selector */}
-      <div className="absolute left-4 top-4 z-20 pointer-events-auto">
-        <label className="sr-only" htmlFor="operation-diagram-scope">
-          Diagram scope
-        </label>
-        <div className="relative">
-          <select
-            id="operation-diagram-scope"
-            value={mode}
-            onChange={(event) => onModeChange(event.target.value)}
-            className="h-9 min-w-44 appearance-none rounded-xl border border-border bg-card/90 pl-3 pr-9 text-sm font-semibold text-foreground shadow-lg backdrop-blur-sm outline-none transition-colors hover:border-primary/50 focus:border-primary"
-          >
-            {modeOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      className="relative h-full min-h-0 w-full select-none overflow-hidden rounded-2xl border border-border bg-card/40 shadow-2xl shadow-black/30 backdrop-blur-sm">
+      {/* Diagram filters */}
+      <div className="pointer-events-auto absolute left-4 top-4 z-20 flex flex-wrap items-center gap-2">
+        <SelectControl
+          id="operation-diagram-station"
+          label="Station"
+          value={stationId ?? ""}
+          onChange={onStationChange}
+          options={stationOptions.map((station) => ({
+            value: station.id,
+            label: station.name,
+          }))}
+          className="w-[220px]"
+        />
+        <SelectControl
+          id="operation-diagram-scope"
+          label="Diagram scope"
+          value={mode}
+          onChange={onModeChange}
+          options={modeOptions}
+          className="w-44"
+        />
+      </div>
+
+      {/* Status and controls */}
+      <div className="pointer-events-auto absolute right-4 top-4 z-20 flex flex-wrap items-center justify-end gap-2">
+        <div className="flex h-9 items-center gap-1 rounded-xl border border-border bg-card/90 px-1 shadow-lg backdrop-blur-sm">
+          <StatusPill
+            label="Station"
+            value={snapshot.status.station}
+            tone={snapshot.status.stationTone}
+          />
+          <StatusPill
+            label="Grid"
+            value={snapshot.status.grid}
+            tone={snapshot.status.gridTone}
+          />
+          <StatusPill
+            label="PLC"
+            value={snapshot.status.plc}
+            tone={snapshot.status.plcTone}
+          />
+        </div>
+        <div className="flex h-9 items-center gap-2 rounded-xl border border-border bg-card/90 px-3 text-sm shadow-lg backdrop-blur-sm">
+          {controlsUnlocked && canUnlockControls ? (
+            <LockOpen className="size-4 text-online" />
+          ) : (
+            <Lock className="size-4 text-muted-foreground" />
+          )}
+          <span className="text-xs font-medium text-muted-foreground">
+            {canUnlockControls ? "Controls" : "Read only"}
+          </span>
+          <Switch
+            checked={controlsUnlocked}
+            disabled={!canUnlockControls}
+            onCheckedChange={onControlsUnlockedChange}
+            aria-label="Unlock controls"
+          />
         </div>
       </div>
 
-      {/* Zoom Toolbar */}
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-2 pointer-events-auto">
+      {/* Diagram controls */}
+      <div className="pointer-events-auto absolute left-4 top-1/2 z-20 flex w-9 -translate-y-1/2 flex-col items-center gap-2">
         <button
           type="button"
           onClick={fitToScreen}
@@ -179,25 +266,25 @@ export function OperationDiagram({
           <RotateCcw className="size-4" />
         </button>
 
-        <div className="flex h-9 items-center gap-3 rounded-xl border border-border bg-card/90 px-2 text-muted-foreground shadow-lg backdrop-blur-sm">
-          <button
-            type="button"
-            onClick={zoomOut}
-            disabled={zoom <= 50}
-            className="flex size-5 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
-            title="Zoom Out">
-            <Minus className="size-3.5" />
-          </button>
-          <span className="min-w-[42px] text-center text-xs font-semibold text-foreground select-none">
-            {zoom}%
-          </span>
+        <div className="flex w-9 flex-col items-center gap-2 rounded-xl border border-border bg-card/90 py-2 text-muted-foreground shadow-lg backdrop-blur-sm">
           <button
             type="button"
             onClick={zoomIn}
             disabled={zoom >= 200}
-            className="flex size-5 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
+            className="flex size-6 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
             title="Zoom In">
             <Plus className="size-3.5" />
+          </button>
+          <span className="select-none text-[11px] font-semibold text-foreground [writing-mode:vertical-rl]">
+            {zoom}%
+          </span>
+          <button
+            type="button"
+            onClick={zoomOut}
+            disabled={zoom <= 50}
+            className="flex size-6 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
+            title="Zoom Out">
+            <Minus className="size-3.5" />
           </button>
         </div>
       </div>
@@ -297,6 +384,71 @@ export function OperationDiagram({
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatusPill({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: OperationSnapshot["status"]["stationTone"];
+}) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg px-2 py-1">
+      <StatusDot status={tone} />
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span
+        className={cn(
+          "text-xs font-semibold",
+          tone === "online" && "text-online",
+          tone === "warning" && "text-warning",
+          tone === "offline" && "text-offline"
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function SelectControl({
+  id,
+  label,
+  value,
+  options,
+  className,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  className?: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className={cn("relative", className)}>
+      <label className="sr-only" htmlFor={id}>
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        disabled={options.length === 0}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-9 w-full appearance-none rounded-xl border border-border bg-card/90 pl-3 pr-9 text-sm font-semibold text-foreground shadow-lg outline-none backdrop-blur-sm transition-colors hover:border-primary/50 focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
     </div>
   );
 }

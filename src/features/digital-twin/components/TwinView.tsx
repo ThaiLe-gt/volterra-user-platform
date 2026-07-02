@@ -1,12 +1,10 @@
 "use client";
 
-import { Bell, MoreHorizontal, Search, Settings } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { MoreHorizontal, Search, Settings } from "lucide-react";
 import { TwinScene } from "./TwinScene";
 import { BimStructureTree } from "./BimStructureTree";
 import { TwinDashboardWidgets } from "./TwinDashboardWidgets";
 import { AssetDetailPanel } from "./AssetDetailPanel";
-import { useBimTree } from "../hooks/useTwinData";
 import { type TwinPanel, useTwinStore } from "../store/twinStore";
 
 interface TwinViewProps {
@@ -19,8 +17,6 @@ export function TwinView({ siteId }: TwinViewProps) {
     detailTarget,
     setDetailTarget,
   } = useTwinStore();
-  const { data: tree } = useBimTree(siteId);
-  const title = tree?.label ?? "Digital Twin";
 
   return (
     <div className="relative h-full w-full">
@@ -29,42 +25,14 @@ export function TwinView({ siteId }: TwinViewProps) {
         <TwinScene />
       </div>
 
-      {/* Top header */}
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-4 p-4">
-        <div className="pointer-events-auto flex items-center gap-3">
-          <h1 className="text-xl font-semibold text-foreground md:text-2xl">
-            {title}
-          </h1>
-          <span className="flex items-center gap-1.5 rounded-full bg-online/15 px-2 py-0.5 text-xs text-online">
-            <span className="size-1.5 rounded-full bg-online" />
-            Online
-          </span>
-        </div>
-        <div className="pointer-events-auto hidden items-center gap-3 md:flex">
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search anything..."
-              className="h-10 rounded-xl border-border bg-card/85 pl-9 backdrop-blur-sm"
-            />
-          </div>
-          <button
-            className="flex size-10 items-center justify-center rounded-xl border border-border bg-card/85 text-muted-foreground backdrop-blur-sm hover:text-foreground"
-            aria-label="Notifications"
-          >
-            <Bell className="size-4" />
-          </button>
-        </div>
-      </header>
-
       {/* Switchable BIM structure / widget panel */}
-      <div className="absolute bottom-24 left-4 right-4 top-32 z-10 md:bottom-6 md:right-auto md:w-[320px]">
+      <div className="absolute bottom-24 left-4 right-4 top-4 z-10 md:bottom-6 md:right-auto md:w-[320px]">
         <TwinSidePanel activePanel={activePanel} siteId={siteId} />
       </div>
 
       {/* Right asset detail panel, opened only from explicit detail actions. */}
       {detailTarget && (
-        <div className="absolute bottom-20 left-2 right-2 top-24 z-20 md:bottom-4 md:left-auto md:right-4 md:top-20">
+        <div className="absolute bottom-20 left-2 right-2 top-4 z-20 md:bottom-4 md:left-auto md:right-4">
           <AssetDetailPanel
             siteId={siteId}
             assetId={detailTarget.assetId}

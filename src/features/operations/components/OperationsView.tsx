@@ -1,16 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Bell,
-  ChevronDown,
-  Lock,
-  LockOpen,
-} from "lucide-react";
-import { StatusDot } from "@/components/common/StatusDot";
-import { Switch } from "@/components/ui/switch";
+import { useAppChromeStore } from "@/components/layout/appChromeStore";
 import { useStationControl } from "@/features/digital-twin/hooks/useDeviceControl";
-import { cn } from "@/lib/utils";
 import {
   OPERATIONS_CONTROLS_ENABLED,
   useOperationSnapshot,
@@ -44,13 +36,22 @@ const MODES: Array<{
 
 export function OperationsView() {
   const [mode, setMode] = useState<OperationMode>("all");
-  const [stationOverride, setStationOverride] = useState<string | null>(null);
-  const [nodeOverride, setNodeOverride] = useState<string | null>(null);
-  const [controlsUnlocked, setControlsUnlocked] = useState(false);
+  const [nodeOverride, setNodeOverride] = useState<{
+    stationId: string;
+    nodeId: string;
+  } | null>(null);
+  const [controlsUnlocked, setControlsUnlocked] = useState<{
+    stationId: string;
+    value: boolean;
+  } | null>(null);
+  const { selectedOperationStationId, setSelectedOperationStationId } =
+    useAppChromeStore();
 
-  const { data: stations = [], isLoading: stationsLoading } =
-    useOperationStations();
-  const selectedStationId = stationOverride ?? stations[0]?.id ?? null;
+  const { data: stations = [] } = useOperationStations();
+  const selectedStationId =
+    stations.find((station) => station.id === selectedOperationStationId)?.id ??
+    stations[0]?.id ??
+    null;
 
   const {
     data: snapshot,
@@ -62,21 +63,25 @@ export function OperationsView() {
     OPERATIONS_CONTROLS_ENABLED ? selectedStationId : null
   );
 
-  const selectedNodeId = snapshot?.nodes.some((node) => node.id === nodeOverride)
-    ? nodeOverride
+  const scopedNodeId =
+    nodeOverride?.stationId === selectedStationId ? nodeOverride.nodeId : null;
+  const selectedNodeId = snapshot?.nodes.some((node) => node.id === scopedNodeId)
+    ? scopedNodeId
     : snapshot?.nodes[0]?.id ?? null;
   const selectedNode =
     snapshot?.nodes.find((node) => node.id === selectedNodeId) ?? null;
 
   const focusGroups = modeToFocusGroups(mode);
   const canUnlock = OPERATIONS_CONTROLS_ENABLED && !snapshot?.readOnly;
+  const controlsAreUnlocked =
+    controlsUnlocked?.stationId === selectedStationId && controlsUnlocked.value;
   const activeStation = stations.find((s) => s.id === selectedStationId);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-background">
       {/* Diagram canvas */}
-      <div className="absolute inset-0 overflow-auto">
-        <div className="flex min-h-full min-w-full items-center justify-center px-6 pb-28 pt-24 2xl:pr-[440px]">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="flex h-full w-full items-center justify-center px-6 py-4 2xl:pr-[470px]">
           {error ? (
             <ErrorPanel
               message={
@@ -93,98 +98,27 @@ export function OperationsView() {
               mode={mode}
               modeOptions={MODES}
               onModeChange={(value) => setMode(value as OperationMode)}
-              onSelect={setNodeOverride}
+              stationId={selectedStationId}
+              stationOptions={stations}
+              onStationChange={setSelectedOperationStationId}
+              canUnlockControls={canUnlock}
+              controlsUnlocked={controlsAreUnlocked}
+              onControlsUnlockedChange={(value) =>
+                selectedStationId
+                  ? setControlsUnlocked({ stationId: selectedStationId, value })
+                  : null
+              }
+              onSelect={(nodeId) =>
+                selectedStationId
+                  ? setNodeOverride({ stationId: selectedStationId, nodeId })
+                  : null
+              }
             />
           ) : (
             <LoadingCanvas />
           )}
         </div>
       </div>
-
-      {/* Floating header */}
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-wrap items-start justify-between gap-3 p-4">
-        <div className="pointer-events-auto flex flex-wrap items-center gap-3">
-          <div className="flex items-baseline gap-2">
-            <h1 className="text-2xl font-semibold text-foreground">
-              Operations
-            </h1>
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="size-1.5 rounded-full bg-online" />
-              single-line
-            </span>
-          </div>
-
-          <div className="relative">
-            <label className="sr-only" htmlFor="operation-station">
-              Station
-            </label>
-            <select
-              id="operation-station"
-              value={selectedStationId ?? ""}
-              disabled={stationsLoading || stations.length === 0}
-              onChange={(event) => {
-                setStationOverride(event.target.value);
-                setNodeOverride(null);
-                setControlsUnlocked(false);
-              }}
-              className="h-10 appearance-none rounded-xl border border-border bg-card/85 pl-3 pr-9 text-sm font-medium text-foreground backdrop-blur-sm outline-none transition-colors hover:border-primary/50 focus:border-primary"
-            >
-              {stations.map((station) => (
-                <option key={station.id} value={station.id}>
-                  {station.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          </div>
-        </div>
-
-        <div className="pointer-events-auto flex flex-wrap items-center justify-end gap-2">
-          {snapshot && (
-            <div className="hidden items-center gap-1 rounded-xl border border-border bg-card/85 px-1 py-1 backdrop-blur-sm lg:flex">
-              <StatusPill
-                label="Station"
-                value={snapshot.status.station}
-                tone={snapshot.status.stationTone}
-              />
-              <StatusPill
-                label="Grid"
-                value={snapshot.status.grid}
-                tone={snapshot.status.gridTone}
-              />
-              <StatusPill
-                label="PLC"
-                value={snapshot.status.plc}
-                tone={snapshot.status.plcTone}
-              />
-            </div>
-          )}
-
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-card/85 px-3 py-2 text-sm backdrop-blur-sm">
-            {controlsUnlocked && canUnlock ? (
-              <LockOpen className="size-4 text-online" />
-            ) : (
-              <Lock className="size-4 text-muted-foreground" />
-            )}
-            <span className="text-xs font-medium text-muted-foreground">
-              {canUnlock ? "Controls" : "Read only"}
-            </span>
-            <Switch
-              checked={controlsUnlocked}
-              disabled={!canUnlock}
-              onCheckedChange={setControlsUnlocked}
-              aria-label="Unlock controls"
-            />
-          </div>
-
-          <button
-            className="flex size-10 items-center justify-center rounded-xl border border-border bg-card/85 text-muted-foreground backdrop-blur-sm hover:text-foreground"
-            aria-label="Notifications"
-          >
-            <Bell className="size-4" />
-          </button>
-        </div>
-      </header>
 
       {/* Floating KPI strip */}
       {snapshot && snapshot.kpis.length > 0 && (
@@ -195,13 +129,13 @@ export function OperationsView() {
                 key={kpi.label}
                 className="min-w-32 shrink-0 rounded-xl border border-border bg-background/40 px-3 py-2"
               >
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="text-[11px] font-medium uppercase tracking-wide text-slate-300">
                   {kpi.label}
                 </div>
-                <div className="mt-0.5 text-sm font-semibold text-foreground">
+                <div className="mt-0.5 text-sm font-semibold text-white">
                   {kpi.value}
                   {kpi.unit ? (
-                    <span className="ml-1 text-xs text-muted-foreground">
+                    <span className="ml-1 text-xs font-medium text-slate-300">
                       {kpi.unit}
                     </span>
                   ) : null}
@@ -213,43 +147,16 @@ export function OperationsView() {
       )}
 
       {/* Floating inspector */}
-      <div className="absolute bottom-4 left-2 right-2 top-32 z-30 md:left-auto md:right-4 md:top-20 md:w-[400px] md:max-w-[calc(100vw-2rem)]">
+      <div className="absolute bottom-4 left-2 right-2 top-4 z-30 md:left-auto md:right-4 md:w-[430px] md:max-w-[calc(100vw-2rem)]">
         <OperationInspector
           snapshot={snapshot ?? fallbackSnapshot(activeStation)}
           node={selectedNode}
           controlsEnabled={OPERATIONS_CONTROLS_ENABLED}
-          controlsUnlocked={controlsUnlocked}
+          controlsUnlocked={controlsAreUnlocked}
           controlContext={controlContext}
           loading={snapshotLoading}
         />
       </div>
-    </div>
-  );
-}
-
-function StatusPill({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: OperationSnapshot["status"]["stationTone"];
-}) {
-  return (
-    <div className="flex items-center gap-1.5 rounded-lg px-2 py-1">
-      <StatusDot status={tone} />
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span
-        className={cn(
-          "text-xs font-semibold",
-          tone === "online" && "text-online",
-          tone === "warning" && "text-warning",
-          tone === "offline" && "text-offline"
-        )}
-      >
-        {value}
-      </span>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Activity,
@@ -49,27 +48,8 @@ export function IconRail() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex h-full w-16 shrink-0 flex-col items-center gap-1 border-r border-border bg-card/60 py-4">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Link
-            href={ROUTES.portfolio}
-            className="mb-8 flex size-10 items-center justify-center rounded-xl bg-background/60 shadow-sm transition-transform hover:scale-105"
-            aria-label="Volterra home">
-            <Image
-              src="/logo.png"
-              alt=""
-              width={947}
-              height={671}
-              priority
-              className="h-9 w-11 object-contain"
-            />
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent side="right">Volterra Home</TooltipContent>
-      </Tooltip>
-
-      <div className="flex flex-1 flex-col items-center gap-1">
+    <nav className="flex h-full w-14 shrink-0 flex-col items-center gap-1 bg-[#050b14]/95 py-3">
+      <div className="flex flex-1 flex-col items-center gap-2">
         {NAV_ITEMS.map((item, idx) => {
           const active = item.match(pathname);
           const Icon = item.icon;
@@ -80,10 +60,11 @@ export function IconRail() {
                   href={item.href}
                   aria-label={item.label}
                   className={cn(
-                    "flex size-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                    active && "bg-accent text-primary",
+                    "flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/7 hover:text-foreground",
+                    active &&
+                      "border border-primary/20 bg-primary/15 text-primary shadow-[0_0_18px_rgba(47,128,237,0.18)]",
                   )}>
-                  <Icon className="size-5" />
+                  <Icon className="size-4" />
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="right">{item.label}</TooltipContent>
@@ -97,8 +78,8 @@ export function IconRail() {
           <Link
             href={ROUTES.portfolio}
             aria-label="Settings"
-            className="flex size-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
-            <Settings className="size-5" />
+            className="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/7 hover:text-foreground">
+            <Settings className="size-4" />
           </Link>
         </TooltipTrigger>
         <TooltipContent side="right">Settings</TooltipContent>
